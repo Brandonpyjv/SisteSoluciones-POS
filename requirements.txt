@@ -12,3 +12,6 @@ qrcode[pil]==8.0
 # para validar y normalizar las fotos de perfil, así que se declara explícita.
 pillow>=10.0
 num2words==0.5.14
+# Cliente HTTP para hablar con la API de FactuGest, que es quien emite las
+# facturas electronicas de este negocio.
+httpx==0.28.1

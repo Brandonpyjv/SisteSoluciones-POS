@@ -24,6 +24,8 @@ from services.inventory_service import (verificar_disponibilidad,
 from services.numeracion_service import reservar_numero, RangoResolucionAgotadoError
 from services.documento_canonico import emisor_desde_factura
 from services.validaciones import abreviatura_documento
+from services.factugest_client import FactugestError, configurado, descargar_pdf, descargar_xml
+from services.emision_service import emitir as emitir_en_factugest
 from templates_config import templates
 from database import get_one, get_many, execute_update, transaction
 
@@ -254,6 +256,10 @@ def view_invoice(request: Request, numero_factura: str):
         "pagos_factura": pagos,
         "notas": notas,
         "inv_origen": inv_origen,
+        # Sin llave configurada no se ofrece el boton: seria prometer algo que
+        # no puede funcionar.
+        "factugest_listo": configurado(),
+        "emision_error": request.query_params.get("error"),
     })
 
 
@@ -553,6 +559,68 @@ async def create_nota_debito_post(
         (consec_nd + 1, cod_empresa)
     )
     return RedirectResponse(url=f"/invoice/{numero_nd}", status_code=303)
+
+
+# ── Emision electronica a traves de FactuGest ────────────────────────────────
+
+@router.post("/{invoice_id}/emitir", name="emitir_factura_electronica")
+def emitir_factura_electronica(request: Request, invoice_id: int):
+    """Pide a FactuGest que convierta esta venta en una factura electronica.
+
+    La venta ya esta guardada y cobrada; esto es un paso aparte. Si falla, la
+    venta no se toca: queda con el error anotado para poder reintentarla.
+    """
+    venta = get_invoice_by_id(invoice_id)
+    if not venta:
+        return RedirectResponse(url="/invoice", status_code=302)
+
+    if venta.get("factugest_id"):
+        # Ya se emitio. No se vuelve a pedir: FactuGest devolveria la misma, pero
+        # no hay razon para el viaje.
+        return RedirectResponse(url=f"/invoice/{venta['numero_factura']}", status_code=303)
+
+    try:
+        emitir_en_factugest(venta)
+    except FactugestError as e:
+        from urllib.parse import quote
+        return RedirectResponse(
+            url=f"/invoice/{venta['numero_factura']}?error={quote(e.detalle)}",
+            status_code=303)
+
+    return RedirectResponse(url=f"/invoice/{venta['numero_factura']}", status_code=303)
+
+
+@router.get("/{invoice_id}/dian/pdf", name="factura_electronica_pdf")
+def factura_electronica_pdf(invoice_id: int):
+    """Reenvia el PDF que guarda FactuGest.
+
+    Se pide desde el servidor y no desde el navegador porque hace falta la llave
+    de la API, y esa llave no puede llegar al navegador: cualquiera que abriera
+    las herramientas de desarrollo podria emitir facturas a nombre del negocio.
+    """
+    return _documento_de_factugest(invoice_id, descargar_pdf, "application/pdf", "pdf")
+
+
+@router.get("/{invoice_id}/dian/xml", name="factura_electronica_xml")
+def factura_electronica_xml(invoice_id: int):
+    return _documento_de_factugest(invoice_id, descargar_xml, "application/xml", "xml")
+
+
+def _documento_de_factugest(invoice_id: int, descargar, tipo_mime: str, extension: str):
+    venta = get_invoice_by_id(invoice_id)
+    if not venta or not venta.get("factugest_id"):
+        return RedirectResponse(url="/invoice", status_code=302)
+    try:
+        contenido = descargar(venta["factugest_id"])
+    except FactugestError as e:
+        from urllib.parse import quote
+        return RedirectResponse(
+            url=f"/invoice/{venta['numero_factura']}?error={quote(e.detalle)}",
+            status_code=303)
+    nombre = venta.get("factugest_numero") or venta["numero_factura"]
+    return Response(
+        content=contenido, media_type=tipo_mime,
+        headers={"Content-Disposition": f'inline; filename="{nombre}.{extension}"'})
 
 
 # ── Endpoints AJAX para el formulario de nueva factura ──────────────────────

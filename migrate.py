@@ -435,6 +435,67 @@ def migracion_005_lineas_de_concepto(cursor):
     return pasos
 
 
+# ── 006 · Emisión electrónica a través de FactuGest ─────────────────────────
+
+def migracion_006_emision_factugest(cursor):
+    """Guarda lo que devuelve FactuGest al emitir electrónicamente una venta.
+
+    Va en columnas aparte y no encima de `numero_factura` y `cufe`: la venta
+    tiene su propio número interno desde que se registra, y la emisión
+    electrónica es un hecho posterior que puede no haber ocurrido todavía, haber
+    fallado, o haberse reintentado. Mezclarlos impediría distinguir «esta venta
+    aún no se ha facturado» de «esta venta se facturó».
+    """
+    columnas = [
+        ("factugest_id", "VARCHAR(40) DEFAULT NULL "
+                         "COMMENT 'Identificador del documento en FactuGest'"),
+        ("factugest_numero", "VARCHAR(50) DEFAULT NULL "
+                             "COMMENT 'Numero con el prefijo de la resolucion DIAN'"),
+        ("factugest_cufe", "VARCHAR(200) DEFAULT NULL"),
+        ("factugest_estado", "VARCHAR(20) DEFAULT NULL "
+                             "COMMENT 'ACEPTADO | RECHAZADO | PENDIENTE | ERROR'"),
+        ("factugest_qr", "VARCHAR(255) DEFAULT NULL"),
+        ("factugest_emitida_en", "DATETIME DEFAULT NULL"),
+        ("factugest_error", "TEXT DEFAULT NULL "
+                            "COMMENT 'Ultimo error, para poder reintentar sabiendo por que fallo'"),
+    ]
+    pasos = []
+    for nombre, definicion in columnas:
+        if not _column_exists(cursor, "facturas", nombre):
+            cursor.execute(f"ALTER TABLE facturas ADD COLUMN {nombre} {definicion}")
+            pasos.append(f"columna facturas.{nombre} creada")
+
+    if pasos:
+        cursor.execute("CREATE INDEX idx_factugest_estado ON facturas (factugest_estado)")
+        pasos.append("indice por estado de emision creado")
+
+    return pasos
+
+
+# ── 007 · Quitar las tablas heredadas de FactuGest ──────────────────────────
+
+def migracion_007_quitar_tablas_de_factugest(cursor):
+    """Este sistema es cliente de la API de FactuGest, no proveedor.
+
+    Las tablas del middleware llegaron con el fork y aquí no significan nada: un
+    punto de venta no tiene clientes API a los que emitirles. Se borran solo si
+    están vacías, por si alguien alcanzó a usarlas.
+    """
+    pasos = []
+    # En orden inverso a las dependencias.
+    for tabla in ("documento_eventos", "documento_lineas", "documentos",
+                  "receptores", "clientes_api"):
+        if not _table_exists(cursor, tabla):
+            continue
+        cursor.execute(f"SELECT COUNT(*) FROM {tabla}")
+        if cursor.fetchone()[0]:
+            pasos.append(f"ATENCION: {tabla} tiene datos y se conserva")
+            continue
+        cursor.execute(f"DROP TABLE {tabla}")
+        pasos.append(f"tabla {tabla} eliminada")
+    return pasos
+
+
 MIGRACIONES = [
     ("001", "Módulo de inventario: kardex de movimientos y flag controla_stock",
      migracion_001_inventario),
@@ -446,6 +507,10 @@ MIGRACIONES = [
      migracion_004_tipos_documento_dian),
     ("005", "Líneas de concepto en detalle_factura y reconstrucción de las notas débito",
      migracion_005_lineas_de_concepto),
+    ("006", "Emisión electrónica a través de FactuGest",
+     migracion_006_emision_factugest),
+    ("007", "Quitar las tablas del middleware heredadas del fork",
+     migracion_007_quitar_tablas_de_factugest),
 ]
 
 
