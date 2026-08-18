@@ -1,0 +1,251 @@
+{% extends "layout.html" %}
+{% import "_form.html" as f %}
+
+{# `valores` llega cuando la validacion rechazo el envio: se prefiere sobre el
+   registro guardado para no borrar lo que la persona acababa de escribir. #}
+{% set v = valores or branch or {} %}
+
+{% block title %}{{ 'Editar Empresa' if branch else 'Nueva Empresa' }} | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 fw-bold">
+            <i class="bi bi-building text-primary me-2"></i>
+            {{ 'Editar Empresa' if branch else 'Nueva Empresa' }}
+        </h1>
+        <p class="text-muted small mb-0">{{ 'Modifica los datos de la empresa.' if branch else 'Registra una nueva empresa o sucursal.' }}</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-xl-7">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <h6 class="m-0 fw-bold text-primary">Datos de la Empresa</h6>
+                </div>
+                <div class="card-body p-4">
+                    {{ f.alerta(errores) }}
+                    <form action="{{ url_for('update_branch', branch_id=branch.cod_empresa) if branch else url_for('create_branch') }}" method="POST" class="needs-validation" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold text-secondary">Nombre de la Empresa *</label>
+                                <input type="text" name="nombre" class="form-control bg-light border-0{{ f.invalido(errores, 'nombre') }}\" required
+                                       value="{{ v.nombre or '' }}"
+                                       placeholder="Ej: Mi Empresa S.A.S." minlength="2" maxlength="255">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">NIT *</label>
+                                <input type="text" name="nit" class="form-control bg-light border-0 font-monospace{{ f.invalido(errores, 'nit') }}\" required
+                                       value="{{ v.nit or '' }}"
+                                       placeholder="900123456" pattern="[0-9]{8,10}" inputmode="numeric">
+                            </div>
+
+                            <div class="col-md-1">
+                                <label class="form-label small fw-bold text-secondary">DV</label>
+                                <input type="text" name="dv" class="form-control bg-light border-0 font-monospace text-center{{ f.invalido(errores, 'dv') }}\"
+                                       maxlength="1"
+                                       value="{{ v.dv or '' }}"
+                                       placeholder="0" pattern="[0-9]" inputmode="numeric">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Tipo Documento</label>
+                                <select name="tipo_documento" class="form-select bg-light border-0{{ f.invalido(errores, 'tipo_documento') }}\">
+                                    <option value="NIT" {{ 'selected' if (v.tipo_documento or 'NIT') == 'NIT' }}>NIT</option>
+                                    <option value="CC" {{ 'selected' if v.tipo_documento == 'CC' }}>Cédula de Ciudadanía</option>
+                                    <option value="CE" {{ 'selected' if v.tipo_documento == 'CE' }}>Cédula de Extranjería</option>
+                                    <option value="PASAPORTE" {{ 'selected' if v.tipo_documento == 'PASAPORTE' }}>Pasaporte</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold text-secondary">Dirección</label>
+                                <input type="text" name="direccion" class="form-control bg-light border-0{{ f.invalido(errores, 'direccion') }}\"
+                                       value="{{ v.direccion or '' }}"
+                                       placeholder="Cll 28 # 9-47" maxlength="255">
+                            </div>
+
+                            <!-- Departamento + Municipio Colombia -->
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold text-secondary">Departamento *</label>
+                                <select id="selectDepartamento" class="form-select bg-light border-0" required>
+                                    <option value="">Seleccionar departamento...</option>
+                                    {% for d in departamentos %}
+                                    <option value="{{ d.cod_departamento }}"
+                                        {{ 'selected' if branch and branch.cod_departamento == d.cod_departamento }}>
+                                        {{ d.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-7">
+                                <label class="form-label small fw-bold text-secondary">Ciudad / Municipio *</label>
+                                <select id="selectMunicipio" name="cod_municipio" class="form-select bg-light border-0{{ f.invalido(errores, 'cod_municipio') }}\" required>
+                                    <option value="">— Seleccione departamento primero —</option>
+                                    {% for m in municipios %}
+                                    <option value="{{ m.cod_municipio }}"
+                                        {{ 'selected' if v.cod_municipio == m.cod_municipio }}>
+                                        {{ m.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Teléfono</label>
+                                <input type="text" name="telefono" class="form-control bg-light border-0{{ f.invalido(errores, 'telefono') }}\"
+                                       value="{{ v.telefono or '' }}"
+                                       placeholder="3001234567" maxlength="40" pattern="[0-9 +()\-]{7,20}">
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold text-secondary">Correo Electrónico</label>
+                                <input type="email" name="correo" class="form-control bg-light border-0{{ f.invalido(errores, 'correo') }}\"
+                                       value="{{ v.correo or '' }}"
+                                       placeholder="empresa@dominio.com" maxlength="150">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary">Régimen Tributario *</label>
+                                <select name="regimen_tributario" class="form-select bg-light border-0{{ f.invalido(errores, 'regimen_tributario') }}\" required>
+                                    <option value="RESPONSABLE_IVA" {{ 'selected' if (v.regimen_tributario or 'RESPONSABLE_IVA') == 'RESPONSABLE_IVA' }}>Responsable de IVA</option>
+                                    <option value="NO_RESPONSABLE_IVA" {{ 'selected' if v.regimen_tributario == 'NO_RESPONSABLE_IVA' }}>No Responsable de IVA</option>
+                                    <option value="GRAN_CONTRIBUYENTE" {{ 'selected' if v.regimen_tributario == 'GRAN_CONTRIBUYENTE' }}>Gran Contribuyente</option>
+                                    <option value="AUTORETENEDOR" {{ 'selected' if v.regimen_tributario == 'AUTORETENEDOR' }}>Autoretenedor</option>
+                                    <option value="REGIMEN_SIMPLE" {{ 'selected' if v.regimen_tributario == 'REGIMEN_SIMPLE' }}>Régimen Simple de Tributación</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary">Actividad Económica (CIIU)</label>
+                                <input type="text" name="actividad_economica" class="form-control bg-light border-0 font-monospace{{ f.invalido(errores, 'actividad_economica') }}\"
+                                       value="{{ v.actividad_economica or '' }}"
+                                       placeholder="Ej: 4711" maxlength="10" pattern="[0-9]{4}" inputmode="numeric">
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold text-secondary">Sitio Web</label>
+                                <input type="text" name="website" class="form-control bg-light border-0{{ f.invalido(errores, 'website') }}\"
+                                       value="{{ v.website or '' }}"
+                                       placeholder="www.miempresa.com" maxlength="255">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Tarifa ICA (%)</label>
+                                <input type="text" name="tarifa_ica" class="form-control bg-light border-0 font-monospace{{ f.invalido(errores, 'tarifa_ica') }}\"
+                                       value="{{ v.tarifa_ica or '' }}"
+                                       placeholder="Ej: 0.414" pattern="[0-9]+([.,][0-9]+)?" inputmode="decimal">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary">Autoretenedor</label>
+                                <select name="autoretenedor" class="form-select bg-light border-0{{ f.invalido(errores, 'autoretenedor') }}\">
+                                    <option value="0" {{ 'selected' if not branch or not branch.autoretenedor }}>No</option>
+                                    <option value="1" {{ 'selected' if branch and branch.autoretenedor }}>Sí</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary">Gran Contribuyente</label>
+                                <select name="gran_contribuyente" class="form-select bg-light border-0{{ f.invalido(errores, 'gran_contribuyente') }}\">
+                                    <option value="0" {{ 'selected' if not branch or not branch.gran_contribuyente }}>No</option>
+                                    <option value="1" {{ 'selected' if branch and branch.gran_contribuyente }}>Sí</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Sección Resolución DIAN -->
+                        <div class="mt-4 p-3 border rounded" style="background:#f8f9fa;">
+                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-shield-check me-1"></i>Resolución DIAN - Facturación Electrónica</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-secondary">Prefijo Factura</label>
+                                    <input type="text" name="prefijo_factura" class="form-control bg-white border font-monospace{{ f.invalido(errores, 'prefijo_factura') }}\"
+                                           value="{{ v.prefijo_factura or 'FV' }}"
+                                           placeholder="FV" maxlength="10" pattern="[A-Za-z0-9]+">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-secondary">Consecutivo Actual</label>
+                                    <input type="number" name="consecutivo_actual" class="form-control bg-white border font-monospace{{ f.invalido(errores, 'consecutivo_actual') }}\"
+                                           value="{{ v.consecutivo_actual or 1 }}"
+                                           min="1" step="1">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-secondary">N° Resolución DIAN</label>
+                                    <input type="text" name="resolucion_dian" class="form-control bg-white border font-monospace{{ f.invalido(errores, 'resolucion_dian') }}\"
+                                           value="{{ v.resolucion_dian or '' }}"
+                                           placeholder="18760000001" maxlength="50">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-secondary">Desde (rango #)</label>
+                                    <input type="number" name="resolucion_desde" class="form-control bg-white border font-monospace{{ f.invalido(errores, 'resolucion_desde') }}\"
+                                           value="{{ v.resolucion_desde or '' }}"
+                                           placeholder="1" min="1" step="1">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-secondary">Hasta (rango #)</label>
+                                    <input type="number" name="resolucion_hasta" class="form-control bg-white border font-monospace{{ f.invalido(errores, 'resolucion_hasta') }}\"
+                                           value="{{ v.resolucion_hasta or '' }}"
+                                           placeholder="5000" min="1" step="1">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-secondary">Fecha Desde</label>
+                                    <input type="date" name="resolucion_fecha_desde" class="form-control bg-white border{{ f.invalido(errores, 'resolucion_fecha_desde') }}\"
+                                           value="{{ fecha_iso(v.resolucion_fecha_desde) }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-secondary">Fecha Hasta</label>
+                                    <input type="date" name="resolucion_fecha_hasta" class="form-control bg-white border{{ f.invalido(errores, 'resolucion_fecha_hasta') }}\"
+                                           value="{{ fecha_iso(v.resolucion_fecha_hasta) }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <a href="{{ url_for('branches') }}" class="btn btn-light border px-4">Cancelar</a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-save me-1"></i> {{ 'Actualizar' if branch else 'Guardar' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const selectDpto  = document.getElementById('selectDepartamento');
+const selectMpio  = document.getElementById('selectMunicipio');
+const savedMpio   = "{{ branch.cod_municipio if branch and branch.cod_municipio else '' }}";
+
+selectDpto.addEventListener('change', async function () {
+    const cod = this.value;
+    selectMpio.innerHTML = '<option value="">Cargando...</option>';
+    if (!cod) {
+        selectMpio.innerHTML = '<option value="">— Seleccione departamento primero —</option>';
+        return;
+    }
+    const data = await fetch(`/api/ubicacion/municipios/${cod}`).then(r => r.json());
+    selectMpio.innerHTML = '<option value="">Seleccionar ciudad...</option>';
+    data.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.cod_municipio;
+        opt.textContent = m.nombre;
+        if (m.cod_municipio === savedMpio) opt.selected = true;
+        selectMpio.appendChild(opt);
+    });
+});
+
+// Al cargar la página, si ya hay departamento seleccionado disparar evento para cargar municipios
+if (selectDpto.value) {
+    selectDpto.dispatchEvent(new Event('change'));
+}
+</script>
+{% endblock %}

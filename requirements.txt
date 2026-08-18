@@ -1,0 +1,14 @@
+fastapi==0.135.1
+uvicorn[standard]==0.41.0
+python-multipart==0.0.22
+mysql-connector-python==9.5.0
+jinja2>=3.1.6
+reportlab==4.2.5
+bcrypt==4.2.1
+python-dotenv==1.0.1
+itsdangerous==2.2.0
+qrcode[pil]==8.0
+# Llegaba de rebote con qrcode[pil]; ahora avatar_service la usa directamente
+# para validar y normalizar las fotos de perfil, así que se declara explícita.
+pillow>=10.0
+num2words==0.5.14

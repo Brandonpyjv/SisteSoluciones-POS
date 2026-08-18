@@ -1,0 +1,145 @@
+{% extends "layout.html" %}
+{% block title %}Nota Crédito — {{ invoice.numero_factura }} | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 fw-bold">
+            <i class="bi bi-arrow-counterclockwise text-warning me-2"></i>Generar Nota Crédito
+        </h1>
+        <p class="text-muted small mb-0">
+            Referenciando factura <strong>{{ invoice.numero_factura }}</strong> —
+            {{ invoice.cliente_nombre }} —
+            <span class="text-primary fw-bold">${{ "{:,.2f}".format(invoice.total) }}</span>
+        </p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-xl-8">
+            {% if error %}
+                    <div class="alert alert-danger border-0 d-flex align-items-start gap-2" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                        <div>{{ error }}</div>
+                    </div>
+                    {% endif %}
+                    <form action="/invoice/{{ invoice.cod_factura }}/nc" method="POST" class="needs-validation" novalidate>
+
+                <!-- Motivo -->
+                <div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
+                    <div class="card-header bg-white py-3 border-bottom border-light">
+                        <h6 class="m-0 fw-bold text-primary">Motivo de la Nota Crédito</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Motivo *</label>
+                            <textarea name="motivo" class="form-control bg-light border-0" rows="2" required minlength="5" maxlength="1000"
+                                      placeholder="Ej: Error en facturación, devolución de mercancía, anulación por solicitud del cliente..."></textarea>
+                        </div>
+                        <div>
+                            <label class="form-label small fw-bold text-secondary">Tipo de Nota Crédito *</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="tipo_nc" value="total"
+                                           id="ncTotal" checked onchange="toggleTipo(this.value)">
+                                    <label class="form-check-label fw-bold" for="ncTotal">
+                                        Anulación Total
+                                        <span class="text-muted fw-normal small d-block">Revierte el 100% de la factura</span>
+                                    </label>
+                                </div>
+                                <div class="form-check ms-4">
+                                    <input class="form-check-input" type="radio" name="tipo_nc" value="parcial"
+                                           id="ncParcial" onchange="toggleTipo(this.value)">
+                                    <label class="form-check-label fw-bold" for="ncParcial">
+                                        Devolución Parcial
+                                        <span class="text-muted fw-normal small d-block">Selecciona los productos a devolver</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Productos (solo para NC parcial) -->
+                <div id="seccionParcial" class="card border-0 shadow-sm mb-3" style="border-radius:12px;display:none!important;">
+                    <div class="card-header bg-white py-3 border-bottom border-light">
+                        <h6 class="m-0 fw-bold text-primary">Productos a Devolver</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                    <tr class="text-uppercase small fw-bold text-white" style="background:linear-gradient(135deg,#4e73df,#6ea0f5);">
+                                        <th class="ps-4" style="background:transparent;color:#fff;">Producto</th>
+                                        <th style="background:transparent;color:#fff;">Cant. Original</th>
+                                        <th style="background:transparent;color:#fff;">Cant. a Devolver</th>
+                                        <th class="text-end pe-4" style="background:transparent;color:#fff;">Valor Línea</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for d in details %}
+                                    <tr>
+                                        <td class="ps-4">
+                                            <span class="fw-bold">{{ d.producto_nombre }}</span>
+                                            <input type="hidden" name="cod_producto" value="{{ d.cod_producto }}">
+                                        </td>
+                                        <td>{{ d.cantidad }}</td>
+                                        <td style="width:140px;">
+                                            <input type="number" name="cantidad" class="form-control form-control-sm border-0 bg-light"
+                                                   value="0" min="0" max="{{ d.cantidad }}">
+                                        </td>
+                                        <td class="text-end pe-4 text-muted small">
+                                            ${{ "{:,.2f}".format(d.subtotal + (d.impuesto_valor or 0)) }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen -->
+                <div class="card border-0 shadow-sm mb-3" style="border-radius:12px;background:#fffbf0;">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-start gap-3">
+                            <i class="bi bi-exclamation-triangle-fill text-warning fs-4 mt-1"></i>
+                            <div class="small">
+                                <p class="fw-bold mb-1">Efectos de esta Nota Crédito:</p>
+                                <ul class="mb-0 text-muted">
+                                    <li>Se genera un documento <strong>NC</strong> con valores negativos referenciando la factura <strong>{{ invoice.numero_factura }}</strong>.</li>
+                                    <li>La factura original quedará en estado <strong>Anulada</strong> (total) o <strong>Parcialmente Anulada</strong> (parcial).</li>
+                                    <li>Ambos documentos quedan en el sistema para trazabilidad contable.</li>
+                                    <li>En producción, la NC debe transmitirse a la DIAN.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{{ url_for('view_invoice', numero_factura=invoice.numero_factura) }}"
+                       class="btn btn-light border px-4">Cancelar</a>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Generar Nota Crédito
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleTipo(val) {
+    const sec = document.getElementById('seccionParcial');
+    if (val === 'parcial') {
+        sec.style.removeProperty('display');
+    } else {
+        sec.style.setProperty('display', 'none', 'important');
+    }
+}
+</script>
+{% endblock %}

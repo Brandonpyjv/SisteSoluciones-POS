@@ -1,0 +1,176 @@
+{% extends "layout.html" %}
+{% import "_form.html" as f %}
+
+{# `valores` llega cuando la validación rechazó el envío: se prefiere sobre el
+   cliente guardado para no borrar lo que la persona acababa de escribir. #}
+{% set v = valores or customer or {} %}
+
+{% block title %}{{ 'Editar Cliente' if customer else 'Nuevo Cliente' }} | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 fw-bold">
+            <i class="bi bi-person-{{ 'pencil' if customer else 'plus' }} text-primary me-2"></i>
+            {{ 'Editar Cliente' if customer else 'Nuevo Cliente' }}
+        </h1>
+        <p class="text-muted small mb-0">{{ 'Modifica los datos del cliente.' if customer else 'Ingresa los datos del nuevo cliente.' }}</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-xl-8">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <h6 class="m-0 fw-bold text-primary">Información del Cliente</h6>
+                </div>
+                <div class="card-body p-4">
+                    {{ f.alerta(errores) }}
+                    <form action="{{ url_for('update_customer', customer_id=customer.customer_id) if customer else url_for('create_customer') }}" method="POST" class="needs-validation" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary">Nombre Completo *</label>
+                                <input type="text" name="full_name" class="form-control bg-light border-0{{ f.invalido(errores, 'full_name') }}" required
+                                       value="{{ v.full_name or '' }}"
+                                       placeholder="Ej: Juan Carlos Pérez" minlength="2" maxlength="200">
+                                {{ f.mensaje(errores, 'full_name') }}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">Tipo Documento *</label>
+                                <select name="document_type" id="documentType" class="form-select bg-light border-0{{ f.invalido(errores, 'document_type') }}" required>
+                                    <option value="">Seleccionar...</option>
+                                    {% for codigo, etiqueta in tipos_documento() %}
+                                    <option value="{{ codigo }}" {{ 'selected' if v.document_type == codigo }}>{{ etiqueta }}</option>
+                                    {% endfor %}
+                                </select>
+                                {{ f.mensaje(errores, 'document_type') }}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">N° Documento *</label>
+                                <input type="text" name="document_number" class="form-control bg-light border-0{{ f.invalido(errores, 'document_number') }}" required
+                                       value="{{ v.document_number or '' }}"
+                                       placeholder="1234567890" maxlength="30">
+                                {{ f.mensaje(errores, 'document_number') }}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Teléfono</label>
+                                <input type="text" name="phone" class="form-control bg-light border-0{{ f.invalido(errores, 'phone') }}"
+                                       value="{{ v.phone or '' }}"
+                                       placeholder="3001234567" maxlength="40" pattern="[0-9 +()\-]{7,20}">
+                                {{ f.mensaje(errores, 'phone') }}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Correo Electrónico</label>
+                                <input type="email" name="email" class="form-control bg-light border-0{{ f.invalido(errores, 'email') }}"
+                                       value="{{ v.email or '' }}"
+                                       placeholder="cliente@email.com" maxlength="150">
+                                {{ f.mensaje(errores, 'email') }}
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label small fw-bold text-secondary">Dirección</label>
+                                <input type="text" name="address" class="form-control bg-light border-0{{ f.invalido(errores, 'address') }}"
+                                       value="{{ v.address or '' }}"
+                                       placeholder="Cll 10 # 2-34" maxlength="255">
+                                {{ f.mensaje(errores, 'address') }}
+                            </div>
+
+                            <!-- Departamento + Municipio Colombia -->
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold text-secondary">Departamento</label>
+                                <select id="selectDepartamento" class="form-select bg-light border-0">
+                                    <option value="">Seleccionar departamento...</option>
+                                    {% for d in departamentos %}
+                                    <option value="{{ d.cod_departamento }}"
+                                        {{ 'selected' if default_cod_dpto == d.cod_departamento }}>
+                                        {{ d.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-7">
+                                <label class="form-label small fw-bold text-secondary">Ciudad / Municipio</label>
+                                <select id="selectMunicipio" name="cod_municipio" class="form-select bg-light border-0{{ f.invalido(errores, 'cod_municipio') }}">
+                                    <option value="">— Seleccione departamento primero —</option>
+                                    {% for m in municipios %}
+                                    <option value="{{ m.cod_municipio }}"
+                                        {{ 'selected' if default_municipio == m.cod_municipio }}>
+                                        {{ m.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {{ f.mensaje(errores, 'cod_municipio') }}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Tipo Persona *</label>
+                                <select name="tipo_persona" class="form-select bg-light border-0{{ f.invalido(errores, 'tipo_persona') }}" required>
+                                    <option value="NATURAL" {{ 'selected' if (v.tipo_persona or 'NATURAL') == 'NATURAL' }}>Natural</option>
+                                    <option value="JURIDICA" {{ 'selected' if v.tipo_persona == 'JURIDICA' }}>Jurídica</option>
+                                </select>
+                                {{ f.mensaje(errores, 'tipo_persona') }}
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold text-secondary">Régimen Tributario *</label>
+                                {% set regimen_actual = v.regimen_tributario or 'NO_RESPONSABLE_IVA' %}
+                                <select name="regimen_tributario" class="form-select bg-light border-0{{ f.invalido(errores, 'regimen_tributario') }}" required>
+                                    <option value="NO_RESPONSABLE_IVA" {{ 'selected' if regimen_actual == 'NO_RESPONSABLE_IVA' }}>No Responsable de IVA</option>
+                                    <option value="RESPONSABLE_IVA" {{ 'selected' if regimen_actual == 'RESPONSABLE_IVA' }}>Responsable de IVA</option>
+                                    <option value="GRAN_CONTRIBUYENTE" {{ 'selected' if regimen_actual == 'GRAN_CONTRIBUYENTE' }}>Gran Contribuyente</option>
+                                    <option value="AUTORETENEDOR" {{ 'selected' if regimen_actual == 'AUTORETENEDOR' }}>Autoretenedor</option>
+                                    <option value="REGIMEN_SIMPLE" {{ 'selected' if regimen_actual == 'REGIMEN_SIMPLE' }}>Régimen Simple de Tributación</option>
+                                </select>
+                                {{ f.mensaje(errores, 'regimen_tributario') }}
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <a href="{{ url_for('customer') }}" class="btn btn-light border px-4">Cancelar</a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-save me-1"></i> {{ 'Actualizar' if customer else 'Guardar' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const selectDpto = document.getElementById('selectDepartamento');
+const selectMpio = document.getElementById('selectMunicipio');
+const savedMpio  = "{{ (customer.cod_municipio if customer and customer.cod_municipio else default_municipio) or '' }}";
+
+selectDpto.addEventListener('change', async function () {
+    const cod = this.value;
+    selectMpio.innerHTML = '<option value="">Cargando...</option>';
+    if (!cod) {
+        selectMpio.innerHTML = '<option value="">— Seleccione departamento primero —</option>';
+        return;
+    }
+    const data = await fetch(`/api/ubicacion/municipios/${cod}`).then(r => r.json());
+    selectMpio.innerHTML = '<option value="">Seleccionar ciudad...</option>';
+    data.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.cod_municipio;
+        opt.textContent = m.nombre;
+        if (m.cod_municipio === savedMpio) opt.selected = true;
+        selectMpio.appendChild(opt);
+    });
+});
+
+if (selectDpto.value) {
+    selectDpto.dispatchEvent(new Event('change'));
+}
+</script>
+{% endblock %}

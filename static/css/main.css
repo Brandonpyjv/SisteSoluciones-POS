@@ -1,0 +1,532 @@
+
+body {
+    background-color: #ffffff; /* Blanco puro */
+    color: #333333;           /* Un gris muy oscuro para que el texto sea legible */
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.sidebar {
+    width: 240px;
+    height: 100vh;
+    background: linear-gradient(135deg, #4e73df, #6ea0f5);
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding-top: 30px;
+    color: white;
+    box-shadow: 8px 0 25px rgba(0, 0, 0, 0.1);
+    border-right: 4px solid transparent;
+    z-index: 1000;
+}
+
+.sidebar h3 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #fff;
+}
+
+.sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 25px;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-size: 16px;
+    transition: all 0.2s ease-in-out;
+    border-left: 4px solid transparent;
+}
+
+.sidebar a:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border-left: 4px solid #fff;
+}
+
+.content {
+    margin-left: 240px;
+    padding: 40px;
+    width: auto;
+    min-height: 100vh;
+}
+
+.welcome-box {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    color: white;
+    padding: 40px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.welcome-box::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    z-index: -1;
+    border-radius: 11px;
+    background: linear-gradient(135deg, rgba(78, 115, 223, 0.5), rgba(34, 74, 190, 0.3));
+    background-size: 200% 200%;
+    animation: gradientBorder 6s ease infinite;
+}
+
+.welcome-box h2 {
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.welcome-box p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 0;
+}
+
+.card {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #fff;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    z-index: -1;
+    border-radius: 11px;
+    background: linear-gradient(135deg, rgba(78, 115, 223, 0.5), rgba(28, 200, 138, 0.3));
+    background-size: 200% 200%;
+    animation: gradientBorder 6s ease infinite;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid #e3e6f0;
+    padding: 1rem 1.25rem;
+}
+
+.table {
+    width: 100%;
+    margin-bottom: 0;
+    color: #858796;
+    vertical-align: middle;
+}
+
+.table thead tr {
+    background: linear-gradient(135deg, #4e73df, #6ea0f5);
+}
+
+.table th {
+    background: transparent !important;
+    color: #fff;
+    text-align: center;
+    font-weight: 600;
+    border-bottom: none;
+    padding: 15px;
+}
+.table tbody th {
+    background: transparent;
+    color: inherit;
+}
+
+.table td {
+    vertical-align: middle;
+    text-align: center;
+    padding: 15px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4e73df, #6ea0f5);
+    border-color: transparent;
+    color: #fff;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #3a5ec0, #4e73df);
+    border-color: transparent;
+    color: #fff;
+}
+
+.btn-warning {
+    color: #333;
+    background-color: #f6c23e;
+    border-color: #f6c23e;
+    transition: all 0.3s ease;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #f6c23e, #fce58d);
+    border-color: transparent;
+    color: #333;
+}
+
+.btn-danger {
+    background-color: #e74a3b;
+    border-color: #e74a3b;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #e74a3b, #f28b81);
+    border-color: transparent;
+    color: #fff;
+}
+
+.btn-secondary {
+    background-color: #858796;
+    border-color: #858796;
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background-color: #60616f;
+    border-color: #60616f;
+}
+
+.btn-cancel {
+    background-color: #fff;
+    border: 1px solid #4e73df;
+    color: #4e73df;
+    padding: 8px 15px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.btn-cancel:hover {
+    background-color: #e7f0ff;
+    color: #224abe;
+    border-color: #224abe;
+}
+
+.btn-update {
+    background-color: #4e73df;
+    border: none;
+    color: #fff;
+    padding: 8px 15px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-update:hover {
+    background-color: #365fcd;
+}
+
+.update-metrics-title {
+    color: #4e73df;
+    font-weight: 700;
+    cursor: default;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+
+    .content {
+        margin-left: 0;
+        padding: 20px;
+    }
+
+    .card-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+@keyframes gradientBorder {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Versión con text-shadow (borde simulado, más compatible) */
+.text-black-outline-shadow {
+    color: rgba(63, 56, 56, 0.801);
+    font-weight: 700;
+    text-shadow:
+        -1px -1px 0 white,
+        1px -1px 0 white,
+        -1px 1px 0 white,
+        1px 1px 0 white;
+}
+
+/* Esto modifica el sidebar para que sean desplegables y barra desplazadora*/
+/* Sidebar scrollable */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+}
+
+.custom-scrollbar {
+    scrollbar-width: thin; /* Para Firefox */
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Personalización de la barra para Chrome/Edge/Safari */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+/* Estilo para los encabezados del desplegable */
+.sidebar-header {
+    padding: 12px 20px;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    color: white;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.sidebar-header:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Rotación del icono cuando el menú está abierto */
+.sidebar-header[aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
+    transition: transform 0.3s;
+}
+
+
+/* estilos para el dashboard principal que muestra resumen
+ */
+
+.dashboard-content {
+    padding: 2rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    background-color: #f8fafc; /* Un gris muy claro para contrastar con las tarjetas blancas */
+    min-height: 100vh;
+}
+
+.dashboard-title {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Grid de KPIs */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.kpi-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.kpi-icon {
+    font-size: 2rem;
+    margin-right: 1rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #eef2ff;
+}
+
+.kpi-info p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.kpi-info h3 {
+    margin: 5px 0 0 0;
+    font-size: 1.4rem;
+    color: #0f172a;
+}
+
+/* Grid Principal (Gráficos y Tablas) */
+.dashboard-main-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* El gráfico ocupa más espacio que la tabla */
+    gap: 1.5rem;
+}
+
+@media (max-width: 992px) {
+    .dashboard-main-grid {
+        grid-template-columns: 1fr; /* Se apilan en pantallas pequeñas */
+    }
+}
+
+.chart-container, .recent-invoices {
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.chart-container h4, .recent-invoices h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #475569;
+}
+
+/* Estilos de la tabla */
+.simple-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.simple-table th, .simple-table td {
+    padding: 12px 10px;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.simple-table th {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.simple-table td {
+    font-size: 0.95rem;
+}
+
+/* Badges (Etiquetas de estado) */
+.badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.badge.paid {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge.pending {
+    background: #fef08a;
+    color: #854d0e;
+}
+
+/* ── Panel de control ──────────────────────────────────────────────────────
+   Las gráficas viven sobre tarjetas blancas: la paleta de series se validó
+   contra esa superficie, no contra el gris de la página. */
+
+.panel-control .cifra-principal {
+    font-size: 2.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #0f172a;
+    /* Cifra grande: figuras proporcionales. tabular-nums solo en columnas. */
+    font-variant-numeric: proportional-nums;
+}
+
+.panel-control .punto-kpi {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Contenedor de canvas: alto explícito para que el eje X quepa dentro de la
+   tarjeta y no aparezca un scroll interno. */
+.panel-control .lienzo {
+    position: relative;
+    width: 100%;
+}
+
+.panel-control .leyenda {
+    display: flex;
+    gap: 1.25rem;
+    font-size: 0.8rem;
+    color: #5a5c69;
+}
+
+.panel-control .leyenda .clave-linea {
+    display: inline-block;
+    width: 14px;
+    height: 3px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+/* El .table global pinta los encabezados en blanco sobre el degradado azul;
+   las tablas gemelas de las gráficas son texto plano dentro de la tarjeta. */
+.panel-control .tabla-datos th {
+    background: transparent !important;
+    color: #858796;
+    text-align: left;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 6px 8px;
+    border-bottom: 1px solid #eef0f5;
+}
+
+.panel-control .tabla-datos td {
+    text-align: left;
+    padding: 6px 8px;
+    font-size: 0.82rem;
+    color: #5a5c69;
+    font-variant-numeric: tabular-nums;
+}
+
+.panel-control .tabla-datos td:first-child {
+    font-variant-numeric: normal;
+}
+
+/* Reporte seleccionado en el catálogo lateral */
+.list-group-item.active-report {
+    background: #f4f7ff;
+    border-left: 3px solid #4e73df;
+}

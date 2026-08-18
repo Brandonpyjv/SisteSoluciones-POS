@@ -1,0 +1,129 @@
+{% extends "layout.html" %}
+
+{% block title %}Kardex {{ producto.nombre }} | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-gray-800 fw-bold">
+                <i class="bi bi-journal-text text-primary me-2"></i>Kardex
+            </h1>
+            <p class="text-muted mb-0 small">
+                <span class="badge bg-light text-dark border font-monospace">{{ producto.sku }}</span>
+                {{ producto.nombre }}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('inventory') }}" class="btn btn-light border px-3 py-2" style="border-radius:8px;">
+                <i class="bi bi-arrow-left me-1"></i> Inventario
+            </a>
+            <a href="{{ url_for('inventory_movimiento_new') }}?cod_producto={{ producto.cod_producto }}"
+               class="btn btn-primary px-4 py-2 shadow-sm" style="border-radius:8px;font-weight:600;">
+                <i class="bi bi-plus-circle-fill me-1"></i> Registrar Movimiento
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
+                <div class="card-body p-4">
+                    <div class="text-muted small fw-bold text-uppercase">Stock Actual</div>
+                    <div class="fs-2 fw-bold {{ 'text-danger' if producto.stock <= producto.stock_minimo else 'text-dark' }}">
+                        {{ producto.stock }}
+                    </div>
+                    <div class="text-muted small">Mínimo configurado: {{ producto.stock_minimo }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
+                <div class="card-body p-4">
+                    <div class="text-muted small fw-bold text-uppercase">Valor en Inventario</div>
+                    <div class="fs-4 fw-bold text-dark">
+                        ${{ "{:,.0f}".format(producto.stock * producto.precio_unitario) }}
+                    </div>
+                    <div class="text-muted small">A ${{ "{:,.2f}".format(producto.precio_unitario) }} por unidad</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
+                <div class="card-body p-4">
+                    <div class="text-muted small fw-bold text-uppercase">Movimientos Registrados</div>
+                    <div class="fs-2 fw-bold text-dark">{{ movimientos|length }}</div>
+                    <div class="text-muted small">Últimos 200</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius:12px;overflow:hidden;">
+        <div class="card-header bg-white py-3 border-bottom border-light">
+            <h6 class="m-0 fw-bold text-primary">Historial de Movimientos</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr class="text-uppercase small fw-bold text-white" style="letter-spacing:0.5px;background:linear-gradient(135deg,#4e73df,#6ea0f5);">
+                            <th class="ps-4" style="background:transparent;color:#fff;">Fecha</th>
+                            <th style="background:transparent;color:#fff;">Tipo</th>
+                            <th style="background:transparent;color:#fff;">Motivo</th>
+                            <th style="background:transparent;color:#fff;">Cantidad</th>
+                            <th style="background:transparent;color:#fff;">Saldo Anterior</th>
+                            <th style="background:transparent;color:#fff;">Saldo Nuevo</th>
+                            <th style="background:transparent;color:#fff;">Documento</th>
+                            <th class="pe-4" style="background:transparent;color:#fff;">Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody class="border-top-0">
+                        {% for m in movimientos %}
+                        <tr>
+                            <td class="ps-4 text-muted small">{{ m.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                {% if m.tipo == 'ENTRADA' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        <i class="bi bi-arrow-down-circle me-1"></i>Entrada</span>
+                                {% elif m.tipo == 'SALIDA' %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                        <i class="bi bi-arrow-up-circle me-1"></i>Salida</span>
+                                {% else %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                        <i class="bi bi-sliders me-1"></i>Ajuste</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-secondary">{{ motivos.get(m.motivo, m.motivo) }}</td>
+                            <td class="fw-bold {{ 'text-success' if m.tipo == 'ENTRADA' else ('text-danger' if m.tipo == 'SALIDA' else 'text-primary') }}">
+                                {{ '+' if m.tipo == 'ENTRADA' else ('-' if m.tipo == 'SALIDA' else '±') }}{{ m.cantidad }}
+                            </td>
+                            <td class="text-muted">{{ m.stock_anterior }}</td>
+                            <td class="fw-bold text-dark">{{ m.stock_nuevo }}</td>
+                            <td>
+                                {% if m.documento %}
+                                    <a href="{{ url_for('view_invoice', numero_factura=m.documento) }}"
+                                       class="badge bg-light text-primary border text-decoration-none">{{ m.documento }}</a>
+                                {% else %}
+                                    <span class="text-muted small">{{ m.observaciones or '—' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-muted small">{{ m.usuario_nombre or 'Sistema' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-journal display-4 d-block mb-3 text-secondary opacity-50"></i>
+                                Este producto todavía no tiene movimientos.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

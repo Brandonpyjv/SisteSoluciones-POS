@@ -1,0 +1,157 @@
+{% extends "layout.html" %}
+{% import "_form.html" as f %}
+
+{# `valores` llega cuando la validacion rechazo el envio: se prefiere sobre el
+   producto guardado para no borrar lo que la persona acababa de escribir. #}
+{% set v = valores or product or {} %}
+
+{% block title %}{{ 'Editar Producto' if product else 'Nuevo Producto' }} | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 fw-bold">
+            <i class="bi bi-box-seam text-primary me-2"></i>
+            {{ 'Editar Producto' if product else 'Nuevo Producto' }}
+        </h1>
+        <p class="text-muted small mb-0">{{ 'Modifica los datos del producto.' if product else 'Ingresa los datos del nuevo producto.' }}</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-xl-9">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <h6 class="m-0 fw-bold text-primary">Información del Producto</h6>
+                </div>
+                <div class="card-body p-4">
+                    {{ f.alerta(errores) }}
+                    <form action="{{ url_for('update_product', product_id=product.cod_producto) if product else url_for('create_product') }}" method="POST" class="needs-validation" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">SKU *</label>
+                                <input type="text" name="sku" class="form-control bg-light border-0 font-monospace{{ f.invalido(errores, 'sku') }}" required
+                                       value="{{ v.sku or '' }}" placeholder="TEC-001" maxlength="60" pattern="[A-Za-z0-9._/\-]+">
+                                {{ f.mensaje(errores, 'sku') }}
+                            </div>
+
+                            <div class="col-md-9">
+                                <label class="form-label small fw-bold text-secondary">Nombre del Producto *</label>
+                                <input type="text" name="nombre" class="form-control bg-light border-0{{ f.invalido(errores, 'nombre') }}" required
+                                       value="{{ v.nombre or '' }}"
+                                       placeholder="Ej: Teclado Mecánico RGB" minlength="2" maxlength="150">
+                                {{ f.mensaje(errores, 'nombre') }}
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-secondary">Descripción</label>
+                                <textarea name="descripcion" class="form-control bg-light border-0{{ f.invalido(errores, 'descripcion') }}" rows="2"
+                                          placeholder="Descripción detallada del producto..." maxlength="500">{{ v.descripcion or '' }}</textarea>
+                                {{ f.mensaje(errores, 'descripcion') }}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">Precio Unitario *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0">$</span>
+                                    <input type="number" name="precio_unitario" class="form-control bg-light border-0{{ f.invalido(errores, 'precio_unitario') }}" required
+                                           step="0.01" min="0.01"
+                                           value="{{ v.precio_unitario or '' }}"
+                                           placeholder="0.00">
+                                </div>
+                                {{ f.mensaje(errores, 'precio_unitario') }}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">Maneja Inventario</label>
+                                <select name="controla_stock" id="controlaStock" class="form-select bg-light border-0"
+                                        onchange="toggleCamposStock()">
+                                    <option value="1" {{ 'selected' if (v.controla_stock is not defined) or v.controla_stock in (1, '1') }}>Sí — descuenta al facturar</option>
+                                    <option value="0" {{ 'selected' if v.controla_stock in (0, '0') }}>No — servicio o intangible</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3 campo-stock">
+                                <label class="form-label small fw-bold text-secondary">Stock Actual</label>
+                                <input type="number" name="stock" class="form-control bg-light border-0{{ f.invalido(errores, 'stock') }}" min="0"
+                                       value="{{ v.stock if v.stock is not none and v.stock != '' else 0 }}" step="1">
+                                {{ f.mensaje(errores, 'stock') }}
+                                {% if product and product.controla_stock %}
+                                <div class="form-text small">Cambiarlo registra un ajuste en el kardex.</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-3 campo-stock">
+                                <label class="form-label small fw-bold text-secondary">Stock Mínimo</label>
+                                <input type="number" name="stock_minimo" class="form-control bg-light border-0{{ f.invalido(errores, 'stock_minimo') }}" min="0"
+                                       value="{{ v.stock_minimo if v.stock_minimo is not none and v.stock_minimo != '' else 5 }}" step="1">
+                                {{ f.mensaje(errores, 'stock_minimo') }}
+                                <div class="form-text small">Por debajo de este valor se genera una alerta.</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">Impuesto *</label>
+                                <select name="cod_impuesto" class="form-select bg-light border-0{{ f.invalido(errores, 'cod_impuesto') }}" required>
+                                    {% for tax in taxes %}
+                                    <option value="{{ tax.cod_impuesto }}"
+                                        {{ 'selected' if v.cod_impuesto|string == tax.cod_impuesto|string }}>
+                                        {{ tax.descripcion }} ({{ tax.porcentaje }}%)
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {{ f.mensaje(errores, 'cod_impuesto') }}
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-secondary">Unidad Medida</label>
+                                <select name="unidad_medida" class="form-select bg-light border-0">
+                                    <option value="C62" {{ 'selected' if (v.unidad_medida or 'C62') == 'C62' }}>C62 - Unidad</option>
+                                    <option value="94" {{ 'selected' if (v.unidad_medida or 'C62') == '94' }}>94 - Unidad</option>
+                                    <option value="WSD" {{ 'selected' if (v.unidad_medida or 'C62') == 'WSD' }}>WSD - Servicio</option>
+                                    <option value="KGM" {{ 'selected' if (v.unidad_medida or 'C62') == 'KGM' }}>KGM - Kilogramo</option>
+                                    <option value="LTR" {{ 'selected' if (v.unidad_medida or 'C62') == 'LTR' }}>LTR - Litro</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Código de Barras</label>
+                                <input type="text" name="codigo_barras" class="form-control bg-light border-0 font-monospace"
+                                       value="{{ v.codigo_barras or '' }}"
+                                       placeholder="Opcional" maxlength="60">
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-secondary">Estado</label>
+                                <select name="activo" class="form-select bg-light border-0">
+                                    <option value="1" {{ 'selected' if (v.activo is not defined) or v.activo in (1, '1') }}>Activo</option>
+                                    <option value="0" {{ 'selected' if v.activo in (0, '0') }}>Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <a href="{{ url_for('product') }}" class="btn btn-light border px-4">Cancelar</a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-save me-1"></i> {{ 'Actualizar' if product else 'Guardar' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleCamposStock() {
+    const controla = document.getElementById('controlaStock').value === '1';
+    document.querySelectorAll('.campo-stock').forEach(c => {
+        c.style.display = controla ? '' : 'none';
+    });
+}
+document.addEventListener('DOMContentLoaded', toggleCamposStock);
+</script>
+{% endblock %}

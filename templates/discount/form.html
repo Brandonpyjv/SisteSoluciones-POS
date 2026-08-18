@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+{% import "_form.html" as f %}
+
+{# `valores` llega cuando la validacion rechazo el envio: se prefiere sobre el
+   registro guardado para no borrar lo que la persona acababa de escribir. #}
+{% set v = valores or discount or {} %}
+
+{% block title %}{{ 'Editar Descuento' if discount else 'Nuevo Descuento' }} | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 fw-bold">
+            <i class="bi bi-tag text-primary me-2"></i>
+            {{ 'Editar Descuento' if discount else 'Nuevo Descuento' }}
+        </h1>
+        <p class="text-muted small mb-0">Configura los parámetros del descuento.</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-xl-6">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <h6 class="m-0 fw-bold text-primary">Datos del Descuento</h6>
+                </div>
+                <div class="card-body p-4">
+                    {{ f.alerta(errores) }}
+                    <form action="{{ url_for('update_discount', discount_id=discount.cod_descuento) if discount else url_for('create_discount') }}" method="POST" class="needs-validation" novalidate>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Descripción *</label>
+                            <input type="text" name="descripcion" class="form-control bg-light border-0{{ f.invalido(errores, 'descripcion') }}" required
+                                   value="{{ v.descripcion or '' }}"
+                                   placeholder="Ej: Descuento por volumen" minlength="2" maxlength="100">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Porcentaje *</label>
+                            <div class="input-group">
+                                <input type="number" name="porcentaje" class="form-control bg-light border-0{{ f.invalido(errores, 'porcentaje') }}" required
+                                       min="0" max="100" step="0.01"
+                                       value="{{ v.porcentaje or '' }}"
+                                       placeholder="0.00">
+                                <span class="input-group-text bg-light border-0">%</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-secondary">Aplica a</label>
+                            <div class="card bg-light border-0 p-3">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="aplica_a_producto"
+                                           value="1" id="aplicaProducto"
+                                           {% if v.aplica_a_producto in (1, '1') %}checked{% endif %}>
+                                    <label class="form-check-label small" for="aplicaProducto">
+                                        <i class="bi bi-box me-1"></i> Aplica a Productos
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="aplica_a_factura"
+                                           value="1" id="aplicaFactura"
+                                           {% if v.aplica_a_factura in (1, '1') %}checked{% endif %}>
+                                    <label class="form-check-label small" for="aplicaFactura">
+                                        <i class="bi bi-receipt me-1"></i> Aplica a Facturas
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{{ url_for('discount') }}" class="btn btn-light border px-4">Cancelar</a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-save me-1"></i> {{ 'Actualizar' if discount else 'Guardar' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

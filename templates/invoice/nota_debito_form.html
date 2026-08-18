@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+{% block title %}Nota Débito — {{ invoice.numero_factura }} | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 fw-bold">
+            <i class="bi bi-plus-circle text-info me-2"></i>Generar Nota Débito
+        </h1>
+        <p class="text-muted small mb-0">
+            Referenciando factura <strong>{{ invoice.numero_factura }}</strong> —
+            {{ invoice.cliente_nombre }} —
+            <span class="text-primary fw-bold">${{ "{:,.2f}".format(invoice.total) }}</span>
+        </p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-xl-7">
+            {% if error %}
+                    <div class="alert alert-danger border-0 d-flex align-items-start gap-2" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                        <div>{{ error }}</div>
+                    </div>
+                    {% endif %}
+                    <form action="/invoice/{{ invoice.cod_factura }}/nd" method="POST" class="needs-validation" novalidate>
+
+                <div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
+                    <div class="card-header bg-white py-3 border-bottom border-light">
+                        <h6 class="m-0 fw-bold text-primary">Datos del Ajuste</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Motivo *</label>
+                            <textarea name="motivo" class="form-control bg-light border-0" rows="2" required minlength="5" maxlength="1000"
+                                      placeholder="Ej: Ajuste de precio, fletes no incluidos, intereses de mora..."></textarea>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary">Valor del Ajuste *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0 fw-bold">$</span>
+                                    <input type="number" name="valor_ajuste" class="form-control bg-light border-0"
+                                           step="0.01" min="0.01" required placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary">¿El valor incluye IVA?</label>
+                                <select name="incluye_iva" class="form-select bg-light border-0">
+                                    <option value="si">Sí — el valor ya incluye IVA</option>
+                                    <option value="no">No — es valor sin IVA</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-3" style="border-radius:12px;background:#f0f8ff;">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-start gap-3">
+                            <i class="bi bi-info-circle-fill text-info fs-4 mt-1"></i>
+                            <div class="small">
+                                <p class="fw-bold mb-1">Efectos de esta Nota Débito:</p>
+                                <ul class="mb-0 text-muted">
+                                    <li>Se genera un documento <strong>ND</strong> con el valor adicional referenciando la factura <strong>{{ invoice.numero_factura }}</strong>.</li>
+                                    <li>La factura original <strong>no cambia de estado</strong> — la ND es un cargo adicional.</li>
+                                    <li>Usos: ajustes de precio, fletes, intereses de mora, diferencias en cambio.</li>
+                                    <li>En producción, la ND debe transmitirse a la DIAN.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{{ url_for('view_invoice', numero_factura=invoice.numero_factura) }}"
+                       class="btn btn-light border px-4">Cancelar</a>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold">
+                        <i class="bi bi-plus-circle me-1"></i> Generar Nota Débito
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

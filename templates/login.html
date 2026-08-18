@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión | Siste Soluciones</title>
+    <link rel="icon" href="{{ url_for('static', path='img/favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='img/favicon-32.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', path='img/apple-touch-icon.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a3a8f 0%, #4e73df 45%, #6ea0f5 75%, #224abe 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 10s ease infinite;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        @keyframes gradientShift {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .bg-bubbles { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            animation: floatUp linear infinite;
+        }
+
+        .bubble:nth-child(1) { width: 320px; height: 320px; left: -120px; bottom: -100px; animation-duration: 18s; }
+        .bubble:nth-child(2) { width: 200px; height: 200px; right: -60px;  top: 10%;    animation-duration: 14s; animation-delay: -4s; }
+        .bubble:nth-child(3) { width: 120px; height: 120px; left: 30%;    top: -40px;  animation-duration: 20s; animation-delay: -8s; }
+        .bubble:nth-child(4) { width: 80px;  height: 80px;  right: 20%;  bottom: 15%; animation-duration: 12s; animation-delay: -2s; }
+        .bubble:nth-child(5) { width: 160px; height: 160px; left: 60%;   bottom: -60px; animation-duration: 16s; animation-delay: -6s; }
+
+        @keyframes floatUp {
+            0%   { transform: translateY(0) rotate(0deg) scale(1);      opacity: 0.4; }
+            50%  { transform: translateY(-30px) rotate(10deg) scale(1.05); opacity: 0.6; }
+            100% { transform: translateY(0) rotate(0deg) scale(1);      opacity: 0.4; }
+        }
+
+        .login-wrapper { position: relative; z-index: 1; width: 100%; max-width: 440px; }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 44px 40px 36px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.8);
+            animation: cardIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to   { opacity: 1; transform: translateY(0)    scale(1); }
+        }
+
+        .logo-section { text-align: center; margin-bottom: 32px; }
+
+        .logo-box {
+            width: 76px; height: 76px;
+            background: linear-gradient(135deg, #4e73df, #6ea0f5);
+            border-radius: 20px;
+            display: inline-flex; align-items: center; justify-content: center;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 30px rgba(78,115,223,0.45);
+            transition: transform 0.3s ease;
+        }
+
+        .logo-box:hover { transform: scale(1.05) rotate(-2deg); }
+        .logo-box img { width: 48px; height: 48px; object-fit: contain; filter: brightness(0) invert(1); }
+
+        .app-name    { font-size: 1.9rem; font-weight: 800; color: #1a202c; letter-spacing: -0.5px; margin-bottom: 4px; }
+        .app-tagline { color: #718096; font-size: 0.88rem; letter-spacing: 0.2px; }
+
+        .divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 20px 0 24px; color: #cbd5e0;
+            font-size: 0.78rem; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, #e2e8f0); }
+        .divider::after { background: linear-gradient(to left, transparent, #e2e8f0); }
+
+        .field-group  { margin-bottom: 18px; }
+        .field-label  { display: block; font-size: 0.82rem; font-weight: 600; color: #4a5568; margin-bottom: 7px; letter-spacing: 0.3px; }
+        .field-wrap   { position: relative; }
+        .field-icon   { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #a0aec0; font-size: 1rem; transition: color 0.2s; pointer-events: none; }
+
+        .field-input {
+            width: 100%; padding: 13px 44px;
+            border: 2px solid #e2e8f0; border-radius: 12px;
+            font-size: 0.94rem; color: #2d3748; background: #f8fafc;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s; outline: none;
+        }
+        .field-input:focus { border-color: #4e73df; background: #fff; box-shadow: 0 0 0 4px rgba(78,115,223,0.12); }
+        .field-wrap:focus-within .field-icon { color: #4e73df; }
+
+        .eye-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #a0aec0; cursor: pointer; padding: 5px; font-size: 1rem; line-height: 1; transition: color 0.2s; }
+        .eye-btn:hover { color: #4e73df; }
+
+        .alert-box { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; font-size: 0.875rem; animation: alertIn 0.3s ease both; }
+        @keyframes alertIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        .alert-error   { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; }
+        .alert-success { background: #f0fff4; border: 1px solid #c6f6d5; color: #276749; }
+
+        .btn-login {
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg, #4e73df 0%, #6ea0f5 100%);
+            border: none; border-radius: 12px;
+            color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; letter-spacing: 0.4px;
+            box-shadow: 0 6px 20px rgba(78,115,223,0.45);
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            margin-top: 8px; position: relative; overflow: hidden;
+        }
+        .btn-login::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent); opacity: 0; transition: opacity 0.2s; }
+        .btn-login:hover   { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(78,115,223,0.55); }
+        .btn-login:hover::before { opacity: 1; }
+        .btn-login:active  { transform: translateY(0); }
+        .btn-login:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+        .btn-spinner { display: none; width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .login-footer { text-align: center; color: #a0aec0; font-size: 0.78rem; margin-top: 28px; padding-top: 20px; border-top: 1px solid #f0f4f8; }
+        .login-footer strong { color: #718096; }
+
+        @media (max-width: 480px) {
+            .login-card { padding: 32px 24px 28px; border-radius: 18px; }
+            .app-name   { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-bubbles">
+    <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+    <div class="bubble"></div><div class="bubble"></div>
+</div>
+
+<div class="login-wrapper">
+    <div class="login-card">
+
+        <div class="logo-section">
+            <div class="logo-box">
+                <img src="{{ url_for('static', path='img/logodark.png') }}" alt="Siste Soluciones Logo">
+            </div>
+            <h1 class="app-name">Siste Soluciones</h1>
+            <p class="app-tagline">Sistema de Facturación Electrónica &bull; Colombia</p>
+        </div>
+
+        {% if error %}
+        <div class="alert-box alert-error">
+            <i class="bi bi-shield-exclamation fs-5"></i>
+            <div><strong>Acceso denegado.</strong> Correo o contraseña incorrectos.</div>
+        </div>
+        {% endif %}
+
+        {% if logout %}
+        <div class="alert-box alert-success">
+            <i class="bi bi-check-circle-fill fs-5"></i>
+            <div><strong>Sesión cerrada.</strong> Ingresa tus credenciales para volver a entrar.</div>
+        </div>
+        {% endif %}
+
+        <div class="divider">Ingresa tus credenciales</div>
+
+        <form action="/login" method="post" id="loginForm" autocomplete="off">
+
+            <div class="field-group">
+                <label class="field-label" for="correo">Correo electrónico</label>
+                <div class="field-wrap">
+                    <i class="bi bi-envelope field-icon"></i>
+                    <input type="email" class="field-input" id="correo" name="correo"
+                           placeholder="usuario@empresa.com" required autocomplete="email">
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="contrasena">Contraseña</label>
+                <div class="field-wrap">
+                    <i class="bi bi-lock field-icon"></i>
+                    <input type="password" class="field-input" id="contrasena" name="contrasena"
+                           placeholder="••••••••" required autocomplete="current-password">
+                    <button type="button" class="eye-btn" onclick="togglePassword()" title="Mostrar/ocultar">
+                        <i class="bi bi-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login" id="loginBtn">
+                <span id="btnText"><i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión</span>
+                <div class="btn-spinner" id="btnSpinner"></div>
+            </button>
+        </form>
+
+        <div class="login-footer">
+            &copy; 2025 <strong>Siste Soluciones</strong> &bull; Todos los derechos reservados
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePassword() {
+        const input = document.getElementById('contrasena');
+        const icon  = document.getElementById('eyeIcon');
+        input.type  = input.type === 'password' ? 'text' : 'password';
+        icon.className = input.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', function () {
+        const btn     = document.getElementById('loginBtn');
+        const text    = document.getElementById('btnText');
+        const spinner = document.getElementById('btnSpinner');
+        btn.disabled       = true;
+        text.style.display = 'none';
+        spinner.style.display = 'block';
+    });
+</script>
+</body>
+</html>

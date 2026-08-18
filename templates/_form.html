@@ -1,0 +1,34 @@
+{# Macros compartidas para mostrar los errores de validación en los formularios. #}
+
+{# Resumen arriba del formulario. Sirve para los campos que no están a la vista
+   porque quedaron en una pestaña o más abajo en la página. #}
+{% macro alerta(errores) -%}
+{% if errores %}
+<div class="alert alert-danger border-0 d-flex align-items-start gap-2" role="alert">
+    <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+    <div>
+        <div class="fw-bold mb-1">No se guardó: revisa los datos marcados</div>
+        <ul class="mb-0 small ps-3">
+            {% for mensaje in errores.values() %}<li>{{ mensaje }}</li>{% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+{%- endmacro %}
+
+{# Clases del input con error. Los formularios usan `border-0`, que deja el borde
+   en cero, así que hay que devolver también `border` para que el rojo se vea. #}
+{% macro invalido(errores, campo) -%}
+{{ ' is-invalid border' if errores and campo in errores else '' }}
+{%- endmacro %}
+
+{# Mensaje bajo el campo, uno solo para los dos casos.
+
+   Si el servidor rechazó el dato, se muestra su mensaje con `d-block`, que lo
+   deja visible pase lo que pase. Si no, el mismo hueco queda como contenedor del
+   aviso del navegador, que Bootstrap revela cuando el formulario lleva
+   `was-validated` y el campo no cumple. Así nunca se pintan dos mensajes. #}
+{% macro mensaje(errores, campo, ayuda='') -%}
+{% if errores and campo in errores %}<div class="invalid-feedback d-block">{{ errores[campo] }}</div>
+{%- else %}<div class="invalid-feedback">{{ ayuda or 'Revisa este dato.' }}</div>{% endif %}
+{%- endmacro %}

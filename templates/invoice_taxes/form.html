@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+{% import "_form.html" as f %}
+
+{# `valores` llega cuando la validacion rechazo el envio: se prefiere sobre el
+   registro guardado para no borrar lo que la persona acababa de escribir. #}
+{% set v = valores or tax or {} %}
+
+{% block title %}{{ 'Editar Impuesto' if tax else 'Nuevo Impuesto' }} | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 fw-bold">
+            <i class="bi bi-percent text-primary me-2"></i>
+            {{ 'Editar Impuesto' if tax else 'Nuevo Impuesto' }}
+        </h1>
+        <p class="text-muted small mb-0">Configura el tipo de impuesto para el sistema de facturación.</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-xl-5 col-md-7">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <h6 class="m-0 fw-bold text-primary">Datos del Impuesto</h6>
+                </div>
+                <div class="card-body p-4">
+                    {{ f.alerta(errores) }}
+                    <form action="{{ url_for('update_tax', tax_id=tax.cod_impuesto) if tax else url_for('create_tax') }}" method="POST" class="needs-validation" novalidate>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Descripción *</label>
+                            <input type="text" name="descripcion" class="form-control bg-light border-0{{ f.invalido(errores, 'descripcion') }}" required
+                                   value="{{ v.descripcion or '' }}"
+                                   placeholder="Ej: IVA, RETEFUENTE, RETEICA" minlength="2" maxlength="60">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Porcentaje *</label>
+                            <div class="input-group">
+                                <input type="number" name="porcentaje" class="form-control bg-light border-0{{ f.invalido(errores, 'porcentaje') }}" required
+                                       min="0" max="100" step="0.01"
+                                       value="{{ v.porcentaje or '' }}"
+                                       placeholder="0.00">
+                                <span class="input-group-text bg-light border-0">%</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-secondary">Código DIAN</label>
+                            <select name="codigo_dian" class="form-select bg-light border-0{{ f.invalido(errores, 'codigo_dian') }}">
+                                <option value="" {{ 'selected' if not tax or not tax.codigo_dian }}>— Sin código DIAN —</option>
+                                <option value="01" {{ 'selected' if tax and tax.codigo_dian == '01' }}>01 — IVA</option>
+                                <option value="02" {{ 'selected' if tax and tax.codigo_dian == '02' }}>02 — Impoconsumo (IC)</option>
+                                <option value="03" {{ 'selected' if tax and tax.codigo_dian == '03' }}>03 — ICA</option>
+                                <option value="05" {{ 'selected' if tax and tax.codigo_dian == '05' }}>05 — ReteFuente</option>
+                                <option value="06" {{ 'selected' if tax and tax.codigo_dian == '06' }}>06 — ReteICA</option>
+                                <option value="07" {{ 'selected' if tax and tax.codigo_dian == '07' }}>07 — ReteIVA</option>
+                                <option value="08" {{ 'selected' if tax and tax.codigo_dian == '08' }}>08 — ReteCREE</option>
+                                <option value="ZY" {{ 'selected' if tax and tax.codigo_dian == 'ZY' }}>ZY — Exento</option>
+                            </select>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{{ url_for('invoice_taxes') }}" class="btn btn-light border px-4">Cancelar</a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-save me-1"></i> {{ 'Actualizar' if tax else 'Guardar' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

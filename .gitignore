@@ -1,0 +1,41 @@
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Fotos de perfil subidas por los usuarios (contenido, no código)
+Factugest/static/img/perfiles/*
+!Factugest/static/img/perfiles/.gitkeep
+
+# Registro de lo que generó seed_demo.py en la BD local de cada quien
+Factugest/seed_demo_manifest.json

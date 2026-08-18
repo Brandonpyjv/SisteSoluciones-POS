@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+
+{% block title %}Configuración | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">
+            <i class="bi bi-gear text-primary me-2"></i>Configuración del Sistema
+        </h1>
+        <p class="text-muted small mb-0">Parámetros generales del sistema de facturación.</p>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-header bg-white border-bottom border-light py-3">
+                    <h6 class="m-0 fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>Información del Sistema</h6>
+                </div>
+                <div class="card-body p-4">
+                    <p><strong>Base de Datos:</strong> <span class="badge bg-success-subtle text-success border">MySQL / MariaDB</span></p>
+                    <p><strong>Framework:</strong> <span class="badge bg-primary-subtle text-primary border">FastAPI</span></p>
+                    <p><strong>Templates:</strong> <span class="badge bg-info-subtle text-info border">Jinja2</span></p>
+                    <p><strong>Estilos:</strong> <span class="badge bg-secondary-subtle text-secondary border">Bootstrap 5.3</span></p>
+                    <p><strong>Puerto:</strong> <span class="badge bg-light text-dark border">8000</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-header bg-white border-bottom border-light py-3">
+                    <h6 class="m-0 fw-bold text-primary"><i class="bi bi-database me-2"></i>Estado de la Base de Datos</h6>
+                </div>
+                <div class="card-body p-4">
+                    <p><strong>Modo:</strong> <span class="badge bg-warning-subtle text-warning border">Solo lectura del esquema</span></p>
+                    <p><strong>Tablas:</strong>
+                        <span class="badge bg-success-subtle text-success border ms-1">customers</span>
+                        <span class="badge bg-success-subtle text-success border ms-1">facturas</span>
+                        <span class="badge bg-success-subtle text-success border ms-1">productos</span>
+                        <span class="badge bg-success-subtle text-success border ms-1">impuestos</span>
+                        <span class="badge bg-success-subtle text-success border ms-1">usuarios</span>
+                    </p>
+                    <p><strong>Estado:</strong> <span class="badge bg-success">Conectado</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-header bg-white border-bottom border-light py-3">
+                    <h6 class="m-0 fw-bold text-primary"><i class="bi bi-link-45deg me-2"></i>Accesos Rápidos</h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-2">
+                        <div class="col-auto"><a href="{{ url_for('invoice') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-receipt me-1"></i>Facturas</a></div>
+                        <div class="col-auto"><a href="{{ url_for('customer') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-people me-1"></i>Clientes</a></div>
+                        <div class="col-auto"><a href="{{ url_for('product') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-box me-1"></i>Productos</a></div>
+                        <div class="col-auto"><a href="{{ url_for('users') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-person-gear me-1"></i>Usuarios</a></div>
+                        <div class="col-auto"><a href="{{ url_for('branches') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-building me-1"></i>Empresas</a></div>
+                        <div class="col-auto"><a href="{{ url_for('invoice_taxes') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-percent me-1"></i>Impuestos</a></div>
+                        <div class="col-auto"><a href="{{ url_for('discount') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-tag me-1"></i>Descuentos</a></div>
+                        <div class="col-auto"><a href="{{ url_for('logs') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-journal-text me-1"></i>Logs</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

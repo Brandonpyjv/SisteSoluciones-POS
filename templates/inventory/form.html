@@ -1,0 +1,143 @@
+{% extends "layout.html" %}
+
+{% block title %}Registrar Movimiento | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 fw-bold">
+            <i class="bi bi-plus-slash-minus text-primary me-2"></i>Registrar Movimiento de Inventario
+        </h1>
+        <p class="text-muted small mb-0">Entradas por compra, salidas por merma o ajustes por conteo físico.</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger border-0 shadow-sm d-flex align-items-start gap-2" style="border-radius:12px;">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>
+            <div class="fw-bold">No se pudo registrar el movimiento</div>
+            <div class="small">{{ error }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row justify-content-center">
+        <div class="col-xl-8">
+            <div class="card border-0 shadow-sm" style="border-radius:12px;overflow:hidden;">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <h6 class="m-0 fw-bold text-primary">Datos del Movimiento</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{{ url_for('inventory_movimiento_create') }}" method="POST" class="needs-validation" novalidate>
+                        <div class="row g-3">
+
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-secondary">Producto *</label>
+                                <select name="cod_producto" id="codProducto" class="form-select bg-light border-0"
+                                        required onchange="actualizarStockActual()">
+                                    <option value="">Selecciona un producto...</option>
+                                    {% for p in productos %}
+                                    <option value="{{ p.cod_producto }}" data-stock="{{ p.stock }}"
+                                        {{ 'selected' if seleccionado == p.cod_producto }}>
+                                        [{{ p.sku }}] {{ p.nombre }} — stock: {{ p.stock }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text small">Solo aparecen productos activos que manejan inventario.</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary">Tipo de Operación *</label>
+                                <select name="tipo" id="tipoMovimiento" class="form-select bg-light border-0"
+                                        required onchange="actualizarFormulario()">
+                                    <option value="ENTRADA">Entrada — suma unidades</option>
+                                    <option value="SALIDA">Salida — resta unidades</option>
+                                    <option value="AJUSTE">Ajuste por conteo — fija el saldo</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6" id="bloqueMotivo">
+                                <label class="form-label small fw-bold text-secondary">Motivo *</label>
+                                <select name="motivo" id="motivo" class="form-select bg-light border-0"></select>
+                            </div>
+
+                            <div class="col-md-6" id="bloqueCantidad">
+                                <label class="form-label small fw-bold text-secondary">Cantidad *</label>
+                                <input type="number" name="cantidad" id="cantidad"
+                                       class="form-control bg-light border-0" min="1" value="1" step="1">
+                            </div>
+
+                            <div class="col-md-6" id="bloqueNuevoStock" style="display:none;">
+                                <label class="form-label small fw-bold text-secondary">Stock Contado *</label>
+                                <input type="number" name="nuevo_stock" id="nuevoStock"
+                                       class="form-control bg-light border-0" min="0" value="0" step="1">
+                                <div class="form-text small">
+                                    Saldo actual en sistema: <span class="fw-bold" id="stockActual">—</span>.
+                                    La diferencia queda registrada como ajuste.
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-secondary">Observaciones</label>
+                                <input type="text" name="observaciones" class="form-control bg-light border-0"
+                                       placeholder="Ej: factura de compra 4521, conteo mensual, producto dañado..." maxlength="255">
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <a href="{{ url_for('inventory') }}" class="btn btn-light border px-4">Cancelar</a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-save me-1"></i> Registrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MOTIVOS_POR_TIPO = {{ motivos_por_tipo | tojson }};
+const ETIQUETAS_MOTIVO = {{ motivos | tojson }};
+
+function actualizarFormulario() {
+    const tipo     = document.getElementById('tipoMovimiento').value;
+    const esAjuste = tipo === 'AJUSTE';
+
+    document.getElementById('bloqueMotivo').style.display      = esAjuste ? 'none' : '';
+    document.getElementById('bloqueCantidad').style.display    = esAjuste ? 'none' : '';
+    document.getElementById('bloqueNuevoStock').style.display  = esAjuste ? '' : 'none';
+    document.getElementById('cantidad').required    = !esAjuste;
+    document.getElementById('nuevoStock').required  = esAjuste;
+
+    const motivo = document.getElementById('motivo');
+    motivo.innerHTML = '';
+    (MOTIVOS_POR_TIPO[tipo] || []).forEach(codigo => {
+        const opt = document.createElement('option');
+        opt.value       = codigo;
+        opt.textContent = ETIQUETAS_MOTIVO[codigo] || codigo;
+        motivo.appendChild(opt);
+    });
+}
+
+function actualizarStockActual() {
+    const sel  = document.getElementById('codProducto');
+    const opt  = sel.options[sel.selectedIndex];
+    const stock = opt ? opt.dataset.stock : null;
+    document.getElementById('stockActual').textContent = stock !== undefined && stock !== null ? stock : '—';
+    if (stock !== undefined && stock !== null && document.getElementById('nuevoStock').value === '0') {
+        document.getElementById('nuevoStock').value = stock;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    actualizarFormulario();
+    actualizarStockActual();
+});
+</script>
+{% endblock %}

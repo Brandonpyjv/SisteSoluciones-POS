@@ -1,0 +1,353 @@
+{% extends "layout.html" %}
+
+{% block title %}Factura #{{ invoice.cod_factura }} | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">
+                <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                {% if invoice.tipo_factura == 'NC' %}Nota Crédito
+                {% elif invoice.tipo_factura == 'ND' %}Nota Débito
+                {% else %}Factura de Venta
+                {% endif %} #{{ invoice.numero_factura or invoice.cod_factura }}
+            </h1>
+            <p class="text-muted small mb-0">
+                {{ invoice.fecha.strftime('%d/%m/%Y %H:%M') if invoice.fecha else 'N/A' }}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('invoice_pdf', invoice_id=invoice.cod_factura) }}"
+               class="btn btn-danger shadow-sm d-flex align-items-center gap-2" target="_blank"
+               style="border-radius: 8px; font-weight: 600;">
+                <i class="bi bi-file-pdf"></i> Descargar PDF
+            </a>
+            <a href="{{ url_for('invoice') }}" class="btn btn-light border" style="border-radius: 8px;">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Info principal -->
+        <div class="col-xl-8">
+
+            <!-- Encabezado empresa -->
+            <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="fw-bold text-primary mb-1">{{ invoice.empresa_nombre }}</h5>
+                            <p class="text-muted small mb-0">NIT: {{ invoice.empresa_nit }}</p>
+                            <p class="text-muted small mb-0">{{ invoice.empresa_direccion }} · {{ invoice.empresa_ciudad }}</p>
+                            <p class="text-muted small mb-0">Tel: {{ invoice.empresa_telefono }}</p>
+                            <p class="text-muted small">{{ invoice.empresa_correo }}</p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <h4 class="fw-bold text-primary">
+                                {% if invoice.tipo_factura == 'NC' %}NOTA CRÉDITO
+                                {% elif invoice.tipo_factura == 'ND' %}NOTA DÉBITO
+                                {% else %}FACTURA ELECTRÓNICA
+                                {% endif %}
+                            </h4>
+                            <p class="mb-0 text-muted small">N° <span class="fw-bold text-dark">{{ invoice.numero_factura or invoice.cod_factura }}</span></p>
+                            <p class="mb-0 text-muted small">
+                                Fecha: {{ invoice.fecha.strftime('%d/%m/%Y') if invoice.fecha else 'N/A' }}
+                            </p>
+                            {% if invoice.fecha_vencimiento %}
+                            <p class="mb-0 text-muted small">Vence: {{ invoice.fecha_vencimiento.strftime('%d/%m/%Y') if invoice.fecha_vencimiento else 'N/A' }}</p>
+                            {% endif %}
+                            <p class="mb-0 text-muted small">Cajero: {{ invoice.usuario_nombre }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info cliente -->
+            <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
+                <div class="card-header bg-white border-bottom border-light py-3">
+                    <h6 class="m-0 fw-bold text-primary">Datos del Cliente</h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1 fw-bold">{{ invoice.cliente_nombre }}</p>
+                            <p class="text-muted small mb-0">{{ abreviatura_documento(invoice.document_type) }}: {{ invoice.document_number }}</p>
+                            <p class="text-muted small mb-0">{{ invoice.cliente_email }}</p>
+                            <p class="text-muted small">{{ invoice.cliente_address }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1 small text-muted fw-bold text-uppercase">Método de Pago</p>
+                            <p class="mb-1">{{ invoice.metodo_pago_nombre }}</p>
+                            {% if invoice.cliente_regimen %}
+                            <p class="mb-1 small text-muted">Régimen: {{ invoice.cliente_regimen | replace('_', ' ') | title }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalle productos -->
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header bg-white border-bottom border-light py-3">
+                    <h6 class="m-0 fw-bold text-primary">Productos / Servicios</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr class="text-uppercase small fw-bold text-white" style="letter-spacing:0.4px;font-size:0.7rem;background:linear-gradient(135deg,#4e73df,#6ea0f5);">
+                                    <th class="ps-4" style="background:transparent;color:#fff;">Producto</th>
+                                    <th style="background:transparent;color:#fff;">SKU</th>
+                                    <th class="text-end" style="background:transparent;color:#fff;">P. Unit.</th>
+                                    <th class="text-center" style="background:transparent;color:#fff;">Cant.</th>
+                                    <th class="text-end" style="background:transparent;color:#fff;">Desc %</th>
+                                    <th class="text-end" style="background:transparent;color:#fff;">Base Grav.</th>
+                                    <th class="text-end" style="background:transparent;color:#fff;">IVA</th>
+                                    <th class="text-end pe-4" style="background:transparent;color:#fff;">Total Línea</th>
+                                </tr>
+                            </thead>
+                            <tbody class="border-top-0">
+                                {% for d in details %}
+                                <tr>
+                                    <td class="ps-4">{{ d.producto_nombre }}</td>
+                                    <td><span class="badge bg-light text-dark border font-monospace">{{ d.sku }}</span></td>
+                                    <td class="text-end">${{ "{:,.2f}".format(d.precio_unitario) }}</td>
+                                    <td class="text-center">{{ d.cantidad }}</td>
+                                    <td class="text-end text-danger">
+                                        {% if d.descuento_porcentaje %}{{ "{:.2f}".format(d.descuento_porcentaje) }}%{% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-end">${{ "{:,.2f}".format(d.subtotal) }}</td>
+                                    <td class="text-end text-success">
+                                        {% if d.impuesto_valor %}${{ "{:,.2f}".format(d.impuesto_valor) }}
+                                        <span class="text-muted" style="font-size:0.75em;">({{ "{:.0f}".format(d.impuesto_porcentaje) }}%)</span>
+                                        {% else %}Exento{% endif %}
+                                    </td>
+                                    <td class="text-end pe-4 fw-bold">${{ "{:,.2f}".format(d.subtotal + (d.impuesto_valor or 0)) }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">Sin detalle registrado.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-top border-light py-3">
+                    <div class="row">
+                        <!-- Conceptos de descuento -->
+                        <div class="col-md-6">
+                            {% set hay_desc_prod = details | selectattr('descuento_valor') | selectattr('descuento_valor', 'gt', 0) | list %}
+                            {% if hay_desc_prod or invoice.descripcion_descuento_factura %}
+                            <p class="small fw-bold text-secondary text-uppercase mb-2">
+                                <i class="bi bi-tag-fill me-1 text-warning"></i>Descuentos Aplicados
+                            </p>
+                            {% for d in details %}
+                            {% if d.descuento_valor and d.descuento_valor > 0 %}
+                            <div class="d-flex align-items-start gap-2 mb-1 small">
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle mt-1" style="font-size:0.65rem;">PRODUCTO</span>
+                                <span>
+                                    <span class="fw-bold">{{ d.producto_nombre }}</span>
+                                    {% if d.descripcion_descuento %} — {{ d.descripcion_descuento }}{% endif %}
+                                    <span class="text-danger">({{ "{:.2f}".format(d.descuento_porcentaje) }}% = -${{ "{:,.2f}".format(d.descuento_valor) }})</span>
+                                </span>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                            {% if invoice.descripcion_descuento_factura %}
+                            {% set ns = namespace(prod_desc=0) %}
+                            {% for d in details %}{% set ns.prod_desc = ns.prod_desc + (d.descuento_valor or 0) %}{% endfor %}
+                            {% set inv_disc_val = (invoice.total_descuentos or 0) - ns.prod_desc %}
+                            {% set base_pct = (invoice.subtotal or 0) + inv_disc_val %}
+                            {% set inv_disc_pct = (inv_disc_val / base_pct * 100) if base_pct > 0 else 0 %}
+                            <div class="d-flex align-items-start gap-2 mt-1 small">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle mt-1" style="font-size:0.65rem;">FACTURA</span>
+                                <span>
+                                    <span class="fw-bold">{{ invoice.descripcion_descuento_factura }}</span>
+                                    <span class="text-danger">({{ "{:.1f}".format(inv_disc_pct) }}% = -${{ "{:,.2f}".format(inv_disc_val) }})</span>
+                                </span>
+                            </div>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                        <!-- Totales -->
+                        <div class="col-md-6 d-flex justify-content-end">
+                            <div style="min-width: 280px;">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="text-muted">Subtotal bruto:</span>
+                                    <span class="fw-bold">${{ "{:,.2f}".format(invoice.subtotal + (invoice.total_descuentos or 0)) }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="text-muted">(-) Descuentos:</span>
+                                    <span class="fw-bold text-danger">${{ "{:,.2f}".format(invoice.total_descuentos or 0) }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="text-muted">Base gravable:</span>
+                                    <span class="fw-bold">${{ "{:,.2f}".format(invoice.subtotal or 0) }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between small mb-2">
+                                    <span class="text-muted">(+) Impuestos:</span>
+                                    <span class="fw-bold text-success">${{ "{:,.2f}".format(invoice.total_impuestos or 0) }}</span>
+                                </div>
+                                <hr class="my-1">
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <span class="small text-muted text-uppercase fw-bold">Total a Pagar</span>
+                                    <h4 class="fw-bold text-primary mb-0">${{ "{:,.2f}".format(invoice.total) }}</h4>
+                                </div>
+                                {% if invoice.observaciones %}
+                                <p class="text-muted small mt-2 mb-0"><i class="bi bi-chat-left-text me-1"></i>{{ invoice.observaciones }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel lateral -->
+        <div class="col-xl-4">
+            <!-- Estado -->
+            <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
+                <div class="card-header bg-white border-bottom border-light py-3">
+                    <h6 class="m-0 fw-bold text-primary">Estado del Pago</h6>
+                </div>
+                <div class="card-body p-4">
+                    {% set ep = (invoice.estado_pago or '').lower() %}
+                    {% if ep == 'paid' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6 mb-3 d-block text-center">
+                            <i class="bi bi-check-circle me-1"></i> Pagado
+                        </span>
+                    {% elif ep == 'pending' %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 fs-6 mb-3 d-block text-center">
+                            <i class="bi bi-hourglass me-1"></i> Pendiente
+                        </span>
+                    {% elif ep == 'partially paid' %}
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 fs-6 mb-3 d-block text-center">
+                            Pago Parcial
+                        </span>
+                    {% elif ep == 'overdue' %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 fs-6 mb-3 d-block text-center">
+                            <i class="bi bi-exclamation-triangle me-1"></i> Vencido
+                        </span>
+                    {% elif ep == 'anulada' %}
+                        <span class="badge bg-dark-subtle text-dark-emphasis border px-3 py-2 fs-6 mb-3 d-block text-center">
+                            <i class="bi bi-x-circle me-1"></i> Anulada
+                        </span>
+                    {% elif ep == 'parcialmente anulada' %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 fs-6 mb-3 d-block text-center">
+                            <i class="bi bi-slash-circle me-1"></i> Parcialmente Anulada
+                        </span>
+                    {% elif ep == 'cancelled' %}
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis border px-3 py-2 fs-6 mb-3 d-block text-center">
+                            Cancelado
+                        </span>
+                    {% else %}
+                        <span class="badge bg-light text-dark border px-3 py-2 fs-6 mb-3 d-block text-center">
+                            {{ etiqueta_estado(invoice.estado_pago) }}
+                        </span>
+                    {% endif %}
+
+                    <form action="{{ url_for('update_invoice_status', invoice_id=invoice.cod_factura) }}" method="POST">
+                        <label class="form-label small fw-bold text-secondary">Cambiar Estado</label>
+                        <select name="cod_pago" class="form-select form-select-sm bg-light border-0 mb-2">
+                            {% for p in pagos_factura %}
+                            <option value="{{ p.cod_pago_factura }}"
+                                {{ 'selected' if p.cod_pago_factura == invoice.cod_pago }}>
+                                {{ p.status | capitalize }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary w-100">
+                            <i class="bi bi-arrow-repeat me-1"></i> Actualizar Estado
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
+                <div class="card-header bg-white border-bottom border-light py-3">
+                    <h6 class="m-0 fw-bold text-primary">Acciones</h6>
+                </div>
+                <div class="card-body p-3 d-grid gap-2">
+                    <a href="{{ url_for('invoice_pdf', invoice_id=invoice.cod_factura) }}"
+                       class="btn btn-danger d-flex align-items-center gap-2 justify-content-center" target="_blank">
+                        <i class="bi bi-file-pdf"></i> Descargar PDF
+                    </a>
+                    <a href="{{ url_for('invoice_xml', invoice_id=invoice.cod_factura) }}"
+                       class="btn d-flex align-items-center gap-2 justify-content-center text-white fw-semibold"
+                       style="background:#4e73df;">
+                        <i class="bi bi-file-code"></i> Descargar XML
+                    </a>
+                    {% set ep = (invoice.estado_pago or '').lower() %}
+                    {% set es_fv = invoice.tipo_factura == 'FV' %}
+                    {% set es_nd = invoice.tipo_factura == 'ND' %}
+                    {% set anulada = ep in ('anulada',) %}
+                    {% if not anulada and (es_fv or es_nd) %}
+                    <hr class="my-1">
+                    <a href="/invoice/{{ invoice.cod_factura }}/nc"
+                       class="btn d-flex align-items-center gap-2 justify-content-center fw-semibold"
+                       style="background:#d0dcf8;color:#2e59d9;">
+                        <i class="bi bi-arrow-counterclockwise"></i> Nota Crédito
+                    </a>
+                    {% if es_fv %}
+                    <a href="/invoice/{{ invoice.cod_factura }}/nd"
+                       class="btn d-flex align-items-center gap-2 justify-content-center fw-semibold"
+                       style="background:#d0dcf8;color:#2e59d9;">
+                        <i class="bi bi-plus-circle"></i> Nota Débito
+                    </a>
+                    {% endif %}
+                    {% endif %}
+                    {% if request.session.get('user', {}).get('rol') not in ('CAJERO', 'SUPERVISOR') %}
+                    <hr class="my-1">
+                    <a href="{{ url_for('delete_invoice', invoice_id=invoice.cod_factura) }}"
+                       class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2 justify-content-center"
+                       onclick="return confirm('⚠️ Solo para entorno de desarrollo. ¿Eliminar?')">
+                        <i class="bi bi-trash"></i> Eliminar (dev)
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Documentos relacionados -->
+            {% if inv_origen or notas %}
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-header bg-white border-bottom border-light py-3">
+                    <h6 class="m-0 fw-bold text-primary">Documentos Relacionados</h6>
+                </div>
+                <div class="card-body p-3">
+                    {% if inv_origen %}
+                    <p class="small text-muted fw-bold text-uppercase mb-1">Factura de Origen</p>
+                    <a href="{{ url_for('view_invoice', numero_factura=inv_origen.numero_factura or inv_origen.cod_factura) }}"
+                       class="d-flex align-items-center gap-2 text-decoration-none mb-2 p-2 rounded border">
+                        <i class="bi bi-file-earmark-text text-primary"></i>
+                        <span class="fw-bold text-dark">{{ inv_origen.numero_factura or inv_origen.cod_factura }}</span>
+                        <span class="text-muted small ms-auto">${{ "{:,.2f}".format(inv_origen.total) }}</span>
+                    </a>
+                    {% if invoice.motivo_nota %}
+                    <p class="small text-muted mb-2"><i class="bi bi-chat-left-quote me-1"></i>{{ invoice.motivo_nota }}</p>
+                    {% endif %}
+                    {% endif %}
+                    {% if notas %}
+                    <p class="small text-muted fw-bold text-uppercase mb-1 mt-2">Notas Emitidas</p>
+                    {% for nota in notas %}
+                    <a href="{{ url_for('view_invoice', numero_factura=nota.numero_factura) }}"
+                       class="d-flex align-items-center gap-2 text-decoration-none mb-1 p-2 rounded border">
+                        <i class="bi bi-{% if nota.tipo_factura == 'NC' %}arrow-counterclockwise text-warning{% else %}plus-circle text-info{% endif %}"></i>
+                        <span class="fw-bold text-dark">{{ nota.numero_factura }}</span>
+                        <span class="badge bg-{% if nota.tipo_factura == 'NC' %}warning{% else %}info{% endif %}-subtle text-{% if nota.tipo_factura == 'NC' %}warning{% else %}info{% endif %}-emphasis border ms-1" style="font-size:0.6rem;">{{ nota.tipo_factura }}</span>
+                        <span class="text-muted small ms-auto">${{ "{:,.2f}".format(nota.total|abs) }}</span>
+                    </a>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

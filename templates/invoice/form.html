@@ -1,0 +1,693 @@
+{% extends "layout.html" %}
+
+{% block title %}Nueva Factura | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 fw-bold">
+            <i class="bi bi-receipt text-primary me-2"></i>Crear Nueva Factura
+        </h1>
+        <p class="text-muted small mb-0">Completa los datos para generar una factura electrónica.</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger border-0 shadow-sm d-flex align-items-start gap-2" style="border-radius:12px;">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>
+            <div class="fw-bold">No se pudo emitir la factura</div>
+            <div class="small">{{ error }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('create_invoice') }}" method="POST" class="needs-validation" novalidate id="invoiceForm">
+        <div class="row g-3">
+
+            <!-- Columna izquierda -->
+            <div class="col-xl-9 col-lg-8">
+
+                <!-- Cabecera factura -->
+                <div class="card border-0 shadow-sm mb-3" style="border-radius:12px;overflow:hidden;">
+                    <div class="card-header bg-white py-3 border-bottom border-light d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 fw-bold text-primary">Datos Generales</h6>
+                        <div>
+                            <select name="tipo_factura" class="form-select form-select-sm bg-light border-0" style="width:auto;display:inline-block;">
+                                <option value="FV">FV — Factura de Venta</option>
+                                <option value="ND">ND — Nota Débito</option>
+                                <option value="NC">NC — Nota Crédito</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+
+                            <!-- Cliente con búsqueda -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary">Cliente *</label>
+                                <div class="position-relative" id="clienteContainer">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-0"><i class="bi bi-search text-muted" style="font-size:0.8rem;"></i></span>
+                                        <input type="text" id="clienteSearch"
+                                               class="form-control bg-light border-0"
+                                               placeholder="Nombre o número de identificación..."
+                                               autocomplete="off">
+                                    </div>
+                                    <div id="clienteDropdown"
+                                         class="list-group position-absolute w-100 shadow"
+                                         style="z-index:1050;display:none;max-height:250px;overflow-y:auto;top:100%;left:0;"></div>
+                                    <input type="hidden" name="cod_cliente" id="codCliente">
+                                    <div id="clienteSeleccionado" class="d-none mt-1">
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-person-check me-1"></i>
+                                            <span id="clienteNombreDisplay"></span>
+                                            <button type="button" class="btn-close ms-1" style="font-size:0.55rem;" onclick="clearCliente()"></button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Empresa (asignada al usuario, solo lectura) -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary">Empresa Emisora</label>
+                                {% if empresa %}
+                                <div class="form-control bg-light border-0 d-flex align-items-center gap-2" style="min-height:38px;">
+                                    <i class="bi bi-building text-primary" style="font-size:0.9rem;"></i>
+                                    <span class="fw-bold text-dark">{{ empresa.nombre }}</span>
+                                    <span class="text-muted small ms-1">— NIT {{ empresa.nit }}{% if empresa.dv %}-{{ empresa.dv }}{% endif %}</span>
+                                </div>
+                                <input type="hidden" name="cod_empresa" value="{{ empresa.cod_empresa }}">
+                                {% else %}
+                                <div class="form-control bg-danger-subtle border-0 d-flex align-items-center gap-2 text-danger" style="min-height:38px;">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    <span class="small">Usuario sin sucursal asignada. Contacta al administrador.</span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Fechas: automáticas -->
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">Fecha Emisión</label>
+                                <div class="form-control bg-light border-0 text-muted small d-flex align-items-center gap-1"
+                                     style="font-size:0.82rem;">
+                                    <i class="bi bi-clock-history"></i>
+                                    Automática al guardar
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">Fecha Vencimiento</label>
+                                <div class="form-control bg-light border-0 text-muted small d-flex align-items-center gap-1"
+                                     style="font-size:0.82rem;">
+                                    <i class="bi bi-calendar-check"></i>
+                                    Automática al guardar
+                                </div>
+                            </div>
+
+                            <!-- Método de Pago -->
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">Método de Pago *</label>
+                                <select name="cod_metodo_pago" class="form-select bg-light border-0" required>
+                                    {% for pm in metodos_pago %}
+                                    <option value="{{ pm.cod_pago }}" {{ 'selected' if pm.cod_pago == 1 }}>{{ pm.descripcion }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Forma de Pago: define el vencimiento -->
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">Forma de Pago *</label>
+                                <select name="plazo_pago" id="plazoPago" class="form-select bg-light border-0"
+                                        required onchange="actualizarVencimiento()">
+                                    <option value="0" selected>Contado</option>
+                                    <option value="8">Crédito 8 días</option>
+                                    <option value="15">Crédito 15 días</option>
+                                    <option value="30">Crédito 30 días</option>
+                                    <option value="60">Crédito 60 días</option>
+                                    <option value="90">Crédito 90 días</option>
+                                </select>
+                                <div class="form-text small" id="avisoVencimiento">
+                                    Se paga al momento de la entrega.
+                                </div>
+                            </div>
+
+                            <!-- Estado Pago -->
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">Estado Pago *</label>
+                                <select name="cod_pago" id="estadoPago" class="form-select bg-light border-0" required>
+                                    {% for s in pagos_factura %}
+                                    <option value="{{ s.cod_pago_factura }}" {{ 'selected' if s.cod_pago_factura == 1 }}>
+                                        {{ etiqueta_estado(s.status) }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Observaciones -->
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-secondary">Observaciones</label>
+                                <input type="text" name="observaciones" class="form-control bg-light border-0"
+                                       placeholder="Notas adicionales para la factura...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de productos -->
+                <div class="card border-0 shadow-sm" style="border-radius:12px;">
+                    <div class="card-header bg-white py-3 border-bottom border-light" style="border-radius:12px 12px 0 0;">
+                        <h6 class="m-0 fw-bold text-primary">Productos / Servicios</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="overflow:visible;">
+                            <table class="table align-middle mb-0" id="productosTable">
+                                <thead>
+                                    <tr class="text-uppercase small fw-bold text-white" style="letter-spacing:0.4px; font-size:0.7rem; background:linear-gradient(135deg,#4e73df,#6ea0f5);">
+                                        <th class="ps-3" style="width:32%;background:transparent;">Producto</th>
+                                        <th style="width:13%;background:transparent;">P. Unitario</th>
+                                        <th style="width:9%;background:transparent;">Cant.</th>
+                                        <th style="width:14%;background:transparent;">Descuento</th>
+                                        <th style="width:11%;background:transparent;">Base Grav.</th>
+                                        <th style="width:12%;background:transparent;">IVA</th>
+                                        <th style="width:9%;background:transparent;" class="text-center pe-3">Acc.</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyProductos">
+                                    <tr class="product-row border-bottom" data-bruto="0" data-descval="0" data-base="0" data-iva="0" data-tax="0">
+                                        <td class="ps-3">
+                                            <div class="position-relative producto-container">
+                                                <input type="text" class="form-control form-control-sm border-0 bg-light producto-search"
+                                                       placeholder="Código o nombre del producto..." autocomplete="off">
+                                                <div class="producto-dropdown list-group position-absolute w-100 shadow-sm"
+                                                     style="z-index:2000;display:none;max-height:220px;overflow-y:auto;top:100%;left:0;min-width:300px;"></div>
+                                                <input type="hidden" name="cod_producto" class="cod-producto">
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="precio_unitario"
+                                                   class="form-control form-control-sm border-0 bg-light price-input"
+                                                   readonly step="0.01" min="0" value="0">
+                                        </td>
+                                        <td>
+                                            <input type="number" name="cantidad"
+                                                   class="form-control form-control-sm border-0 bg-light qty-input"
+                                                   value="1" min="1" required onchange="calcRow(this)">
+                                        </td>
+                                        <td>
+                                            <select name="descuento_porcentaje"
+                                                    class="form-select form-select-sm border-0 bg-light desc-select"
+                                                    onchange="calcRow(this)">
+                                                <option value="0" data-desc="">Sin descuento</option>
+                                            </select>
+                                            <input type="hidden" name="descuento_descripcion" class="desc-desc" value="">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm border-0 bg-light base-display"
+                                                   readonly style="font-size:0.8rem;font-weight:600;">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm border-0 bg-light tax-display text-success"
+                                                   readonly style="font-size:0.8rem;">
+                                        </td>
+                                        <td class="text-center pe-3">
+                                            <button type="button" class="btn btn-sm btn-light border text-danger" onclick="removeRow(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-top border-light">
+                            <button type="button" class="btn btn-sm btn-light border text-primary" onclick="addRow()">
+                                <i class="bi bi-plus-circle me-1"></i> Agregar Producto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Panel resumen -->
+            <div class="col-xl-3 col-lg-4">
+                <div class="card border-0 shadow-sm position-sticky bg-white" style="top:80px;border-radius:12px;overflow:hidden;">
+                    <div class="card-header py-3 border-bottom border-0 text-center" style="background:linear-gradient(135deg,#4e73df,#6ea0f5);">
+                        <h6 class="m-0 fw-bold text-white">Resumen Factura</h6>
+                    </div>
+                    <div class="card-body p-4 bg-white">
+
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">Subtotal bruto:</span>
+                            <span class="fw-bold" id="dispSubtotal">$ 0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">(-) Desc. productos:</span>
+                            <span class="fw-bold text-danger" id="dispDescProductos">$ 0.00</span>
+                        </div>
+
+                        <!-- Descuento a factura -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary mb-1">Descuento en Factura</label>
+                            <select id="selectDescuentoFactura" class="form-select form-select-sm bg-light border-0"
+                                    onchange="applyInvoiceDiscount(this)">
+                                <option value="">Sin descuento en factura</option>
+                                {% for d in invoice_discounts %}
+                                <option value="{{ d.cod_descuento }}" data-pct="{{ d.porcentaje }}">
+                                    {{ d.descripcion }} ({{ d.porcentaje }}%)
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="hidden" name="cod_descuento_factura" id="codDescuentoFactura">
+                            <input type="hidden" name="valor_descuento_factura" id="valorDescuentoFactura" value="0">
+                            <input type="hidden" id="pctDescuentoFactura" value="0">
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-2 small" id="rowDescFactura" style="display:none!important;">
+                            <span class="text-muted">(-) Desc. factura:</span>
+                            <span class="fw-bold text-danger" id="dispDescFactura">$ 0.00</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">Base gravable:</span>
+                            <span class="fw-bold" id="dispBase">$ 0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">(+) Impuestos:</span>
+                            <span class="fw-bold text-success" id="dispImpuestos">$ 0.00</span>
+                        </div>
+                        <hr class="my-2">
+
+                        <input type="hidden" name="total" id="hidTotal">
+
+                        <div class="rounded text-center p-3 mb-4 bg-light border">
+                            <p class="mb-1 small text-uppercase fw-bold text-muted">TOTAL A PAGAR</p>
+                            <h3 class="mb-0 fw-bold text-dark" id="dispTotal">$ 0.00</h3>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn py-2 d-flex justify-content-center align-items-center gap-2 fw-bold text-white"
+                                    style="border-radius:8px;background:linear-gradient(135deg,#4e73df,#6ea0f5);border:none;">
+                                <i class="bi bi-save"></i> Guardar Factura
+                            </button>
+                            <a href="{{ url_for('invoice') }}" class="btn btn-light border py-2 fw-bold"
+                               style="border-radius:8px;">Cancelar</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const fmt = v => '$ ' + parseFloat(v || 0).toLocaleString('es-CO', {minimumFractionDigits: 2});
+
+// ── Búsqueda de Cliente ───────────────────────────────────────────────────────
+const clienteSearch   = document.getElementById('clienteSearch');
+const clienteDropdown = document.getElementById('clienteDropdown');
+let clienteTimer;
+
+clienteSearch.addEventListener('input', function() {
+    clearTimeout(clienteTimer);
+    document.getElementById('codCliente').value = '';
+    document.getElementById('clienteSeleccionado').classList.add('d-none');
+    const q = this.value.trim();
+    if (q.length < 2) { clienteDropdown.style.display = 'none'; return; }
+    clienteTimer = setTimeout(() => fetchClientes(q), 300);
+});
+
+clienteSearch.addEventListener('blur', () =>
+    setTimeout(() => { clienteDropdown.style.display = 'none'; }, 200));
+
+async function fetchClientes(q) {
+    try {
+        const res  = await fetch('/invoice/api/customers/search?q=' + encodeURIComponent(q));
+        const data = await res.json();
+        clienteDropdown.innerHTML = '';
+        if (data.length === 0) {
+            clienteDropdown.innerHTML = '<div class="list-group-item text-muted small py-2">No se encontraron clientes</div>';
+        } else {
+            data.forEach(c => {
+                const btn = document.createElement('button');
+                btn.type      = 'button';
+                btn.className = 'list-group-item list-group-item-action py-2 small';
+                btn.innerHTML = `<strong>${c.full_name}</strong>
+                    <span class="text-muted ms-2 small">${c.document_type_label || ''} ${c.document_number || ''}</span>`;
+                btn.addEventListener('mousedown', e => { e.preventDefault(); selectCliente(c); });
+                clienteDropdown.appendChild(btn);
+            });
+        }
+        clienteDropdown.style.display = 'block';
+    } catch (err) { console.error('Error buscando clientes:', err); }
+}
+
+function selectCliente(c) {
+    document.getElementById('codCliente').value = c.customer_id;
+    clienteSearch.value = c.full_name + ' — ' + (c.document_type_label || '') + ' ' + (c.document_number || '');
+    clienteDropdown.style.display = 'none';
+    document.getElementById('clienteNombreDisplay').textContent = c.full_name;
+    document.getElementById('clienteSeleccionado').classList.remove('d-none');
+}
+
+function clearCliente() {
+    document.getElementById('codCliente').value = '';
+    clienteSearch.value = '';
+    document.getElementById('clienteSeleccionado').classList.add('d-none');
+    clienteSearch.focus();
+}
+
+// ── Búsqueda de Producto por fila ─────────────────────────────────────────────
+function initProductSearch(row) {
+    const searchInput = row.querySelector('.producto-search');
+    const dropdown    = row.querySelector('.producto-dropdown');
+    let timer;
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timer);
+        row.querySelector('.cod-producto').value = '';
+        const q = this.value.trim();
+        if (q.length < 2) { dropdown.style.display = 'none'; return; }
+        timer = setTimeout(() => fetchProductos(q, row, dropdown), 300);
+    });
+
+    searchInput.addEventListener('blur', () =>
+        setTimeout(() => { dropdown.style.display = 'none'; }, 200));
+}
+
+async function fetchProductos(q, row, dropdown) {
+    try {
+        const res  = await fetch('/invoice/api/products/search?q=' + encodeURIComponent(q));
+        const data = await res.json();
+        dropdown.innerHTML = '';
+        if (data.length === 0) {
+            dropdown.innerHTML = '<div class="list-group-item text-muted small py-2">No se encontraron productos</div>';
+        } else {
+            data.forEach(p => {
+                const btn = document.createElement('button');
+                btn.type      = 'button';
+                btn.className = 'list-group-item list-group-item-action py-2 small';
+                btn.innerHTML = `<strong>[${p.sku}]</strong> ${p.nombre}
+                    <span class="text-muted ms-2">${fmt(p.precio_unitario)}</span>
+                    ${stockBadge(p)}`;
+                if (p.controla_stock && p.stock <= 0) {
+                    btn.classList.add('disabled');
+                    btn.setAttribute('aria-disabled', 'true');
+                } else {
+                    btn.addEventListener('mousedown', e => { e.preventDefault(); selectProducto(p, row, dropdown); });
+                }
+                dropdown.appendChild(btn);
+            });
+        }
+        dropdown.style.display = 'block';
+    } catch (err) { console.error('Error buscando productos:', err); }
+}
+
+// Etiqueta de existencias en el buscador. Los servicios (controla_stock = 0) no
+// llevan inventario, así que no muestran nada.
+function stockBadge(p) {
+    if (!p.controla_stock) return '';
+    if (p.stock <= 0) return '<span class="badge bg-secondary ms-2">Sin stock</span>';
+    return `<span class="badge bg-light text-dark border ms-2">Stock: ${p.stock}</span>`;
+}
+
+async function selectProducto(p, row, dropdown) {
+    row.querySelector('.cod-producto').value     = p.cod_producto;
+    row.querySelector('.producto-search').value  = '[' + p.sku + '] ' + p.nombre;
+    row.querySelector('.price-input').value      = p.precio_unitario;
+    row.dataset.tax   = p.tax_porcentaje;
+    row.dataset.stock = p.controla_stock ? p.stock : '';
+    const qty = row.querySelector('.qty-input');
+    if (p.controla_stock) {
+        qty.max = p.stock;
+    } else {
+        qty.removeAttribute('max');
+    }
+    dropdown.style.display = 'none';
+    await loadProductDiscounts(row, p.cod_producto);
+    calcRow(row.querySelector('.desc-select'));
+    // Si esta es la última fila, agregar automáticamente una nueva
+    const rows = document.querySelectorAll('.product-row');
+    if (rows[rows.length - 1] === row) {
+        addRow();
+    }
+}
+
+async function loadProductDiscounts(row, codProducto) {
+    const select = row.querySelector('.desc-select');
+    select.innerHTML = '<option value="0" data-desc="">Sin descuento</option>';
+    try {
+        const res       = await fetch('/invoice/api/products/' + codProducto + '/discounts');
+        const discounts = await res.json();
+        discounts.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value          = d.porcentaje;
+            opt.dataset.desc   = d.descripcion;
+            opt.textContent    = d.descripcion + ' (' + d.porcentaje + '%)';
+            select.appendChild(opt);
+        });
+    } catch (err) { console.error('Error cargando descuentos:', err); }
+}
+
+// ── Descuento a factura ───────────────────────────────────────────────────────
+function applyInvoiceDiscount(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    const cod = opt.value || '';
+    const pct = cod ? parseFloat(opt.dataset.pct || 0) : 0;
+    document.getElementById('codDescuentoFactura').value = cod;
+    document.getElementById('pctDescuentoFactura').value = pct;
+    calcTotales();
+}
+
+// ── Cálculos ──────────────────────────────────────────────────────────────────
+function calcRow(el) {
+    const row    = el.closest('tr');
+    const precio = parseFloat(row.querySelector('.price-input').value) || 0;
+    const cant   = parseFloat(row.querySelector('.qty-input').value)   || 0;
+    const sel    = row.querySelector('.desc-select');
+    const desc   = parseFloat(sel.value) || 0;
+    const tax    = parseFloat(row.dataset.tax || 0);
+
+    const bruto   = precio * cant;
+    const descVal = bruto * desc / 100;
+    const base    = bruto - descVal;
+    const iva     = base * tax / 100;
+
+    row.querySelector('.base-display').value = fmt(base);
+    row.querySelector('.tax-display').value  = tax > 0
+        ? fmt(iva) + ' (' + tax + '%)'
+        : 'EXENTO';
+
+    row.dataset.bruto   = bruto;
+    row.dataset.descval = descVal;
+    row.dataset.base    = base;
+    row.dataset.iva     = iva;
+
+    // capturar descripción del descuento seleccionado
+    const descDescInput = row.querySelector('.desc-desc');
+    if (descDescInput) {
+        descDescInput.value = sel.options[sel.selectedIndex]?.dataset?.desc || '';
+    }
+    marcarExcesoStock();
+    calcTotales();
+}
+
+// Suma las cantidades por producto: el mismo producto en dos filas compite contra
+// el mismo saldo. Retorna los productos cuya suma supera las existencias.
+function excesosDeStock() {
+    const pedido = {};
+    document.querySelectorAll('.product-row').forEach(r => {
+        const cod = r.querySelector('.cod-producto').value;
+        if (!cod || r.dataset.stock === '' || r.dataset.stock === undefined) return;
+        if (!pedido[cod]) {
+            pedido[cod] = {
+                disponible: parseInt(r.dataset.stock, 10),
+                nombre:     r.querySelector('.producto-search').value,
+                cantidad:   0,
+                filas:      [],
+            };
+        }
+        pedido[cod].cantidad += parseInt(r.querySelector('.qty-input').value, 10) || 0;
+        pedido[cod].filas.push(r);
+    });
+    return Object.values(pedido).filter(p => p.cantidad > p.disponible);
+}
+
+function marcarExcesoStock() {
+    document.querySelectorAll('.qty-input').forEach(i => i.classList.remove('is-invalid'));
+    excesosDeStock().forEach(p =>
+        p.filas.forEach(r => r.querySelector('.qty-input').classList.add('is-invalid')));
+}
+
+function calcTotales() {
+    let subtotal = 0, descProd = 0, ivaTot = 0;
+    document.querySelectorAll('.product-row').forEach(r => {
+        subtotal += parseFloat(r.dataset.bruto   || 0);
+        descProd += parseFloat(r.dataset.descval || 0);
+        ivaTot   += parseFloat(r.dataset.iva     || 0);
+    });
+
+    const baseProds  = subtotal - descProd;
+    const invPct     = parseFloat(document.getElementById('pctDescuentoFactura').value || 0);
+    const invDiscVal = baseProds * invPct / 100;
+    const baseAfterAll = baseProds - invDiscVal;
+
+    // Prorratear IVA: el descuento de factura reduce la base imponible
+    const ratio      = baseProds > 0 ? invDiscVal / baseProds : 0;
+    const ivaAjustado = ivaTot * (1 - ratio);
+    const total      = baseAfterAll + ivaAjustado;
+
+    document.getElementById('valorDescuentoFactura').value = invDiscVal.toFixed(2);
+
+    document.getElementById('dispSubtotal').textContent      = fmt(subtotal);
+    document.getElementById('dispDescProductos').textContent  = fmt(descProd);
+    document.getElementById('dispBase').textContent           = fmt(baseAfterAll);
+    document.getElementById('dispImpuestos').textContent      = fmt(ivaAjustado);
+    document.getElementById('dispTotal').textContent          = fmt(total);
+    document.getElementById('hidTotal').value                 = total.toFixed(2);
+
+    const rowDescFactura = document.getElementById('rowDescFactura');
+    if (invDiscVal > 0) {
+        document.getElementById('dispDescFactura').textContent = fmt(invDiscVal);
+        rowDescFactura.style.removeProperty('display');
+    } else {
+        rowDescFactura.style.setProperty('display', 'none', 'important');
+    }
+}
+
+// ── Filas de producto ─────────────────────────────────────────────────────────
+function buildRowHTML() {
+    return `
+        <td class="ps-3">
+            <div class="position-relative producto-container">
+                <input type="text" class="form-control form-control-sm border-0 bg-light producto-search"
+                       placeholder="Código o nombre del producto..." autocomplete="off">
+                <div class="producto-dropdown list-group position-absolute w-100 shadow-sm"
+                     style="z-index:2000;display:none;max-height:220px;overflow-y:auto;top:100%;left:0;min-width:300px;"></div>
+                <input type="hidden" name="cod_producto" class="cod-producto">
+            </div>
+        </td>
+        <td><input type="number" name="precio_unitario"
+                   class="form-control form-control-sm border-0 bg-light price-input"
+                   readonly step="0.01" min="0" value="0"></td>
+        <td><input type="number" name="cantidad"
+                   class="form-control form-control-sm border-0 bg-light qty-input"
+                   value="1" min="1" required onchange="calcRow(this)"></td>
+        <td>
+            <select name="descuento_porcentaje"
+                    class="form-select form-select-sm border-0 bg-light desc-select"
+                    onchange="calcRow(this)">
+                <option value="0" data-desc="">Sin descuento</option>
+            </select>
+            <input type="hidden" name="descuento_descripcion" class="desc-desc" value="">
+        </td>
+        <td><input type="text" class="form-control form-control-sm border-0 bg-light base-display"
+                   readonly style="font-size:0.8rem;font-weight:600;"></td>
+        <td><input type="text" class="form-control form-control-sm border-0 bg-light tax-display text-success"
+                   readonly style="font-size:0.8rem;"></td>
+        <td class="text-center pe-3">
+            <button type="button" class="btn btn-sm btn-light border text-danger" onclick="removeRow(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>`;
+}
+
+function addRow() {
+    const tbody = document.getElementById('tbodyProductos');
+    const tr    = document.createElement('tr');
+    tr.className    = 'product-row border-bottom';
+    tr.dataset.bruto   = 0;
+    tr.dataset.descval = 0;
+    tr.dataset.base    = 0;
+    tr.dataset.iva     = 0;
+    tr.dataset.tax     = 0;
+    tr.innerHTML = buildRowHTML();
+    tbody.appendChild(tr);
+    initProductSearch(tr);
+    tr.querySelector('.producto-search').focus();
+}
+
+function removeRow(btn) {
+    const rows = document.querySelectorAll('.product-row');
+    if (rows.length > 1) {
+        btn.closest('tr').remove();
+        calcTotales();
+    } else {
+        alert('La factura debe tener al menos un producto.');
+    }
+}
+
+// ── Validación y arranque ─────────────────────────────────────────────────────
+document.getElementById('invoiceForm').addEventListener('submit', function(e) {
+    if (!document.getElementById('codCliente').value) {
+        e.preventDefault();
+        alert('Debe seleccionar un cliente de la lista de resultados.');
+        document.getElementById('clienteSearch').focus();
+        return;
+    }
+
+    // Eliminar filas vacías (la que se agrega automáticamente al seleccionar producto)
+    document.querySelectorAll('.product-row').forEach(row => {
+        if (!row.querySelector('.cod-producto').value) {
+            row.remove();
+        }
+    });
+
+    if (document.querySelectorAll('.product-row').length === 0) {
+        e.preventDefault();
+        alert('Debe agregar al menos un producto a la factura.');
+        addRow();
+        return;
+    }
+
+    const excesos = excesosDeStock();
+    if (excesos.length > 0) {
+        e.preventDefault();
+        marcarExcesoStock();
+        alert('No hay stock suficiente:\n\n' + excesos
+            .map(p => `• ${p.nombre}: disponible ${p.disponible}, solicitado ${p.cantidad}`)
+            .join('\n'));
+        addRow();  // reponer la fila vacía que se eliminó arriba
+        return;
+    }
+});
+
+// ── Forma de pago ─────────────────────────────────────────────────────────────
+// El vencimiento no se escribe a mano: sale del plazo pactado. El cajero ve la
+// fecha resultante antes de emitir, para no descubrirla en el PDF.
+function actualizarVencimiento() {
+    const dias   = parseInt(document.getElementById('plazoPago').value, 10) || 0;
+    const aviso  = document.getElementById('avisoVencimiento');
+    const estado = document.getElementById('estadoPago');
+
+    if (dias === 0) {
+        aviso.textContent = 'Se paga al momento de la entrega.';
+        aviso.className   = 'form-text small';
+    } else {
+        const vence = new Date();
+        vence.setDate(vence.getDate() + dias);
+        aviso.textContent = 'Vence el ' + vence.toLocaleDateString('es-CO',
+            {day: '2-digit', month: '2-digit', year: 'numeric'});
+        aviso.className   = 'form-text small text-primary fw-bold';
+    }
+
+    // A crédito la factura nace sin cobrar; de contado, pagada. El cajero puede
+    // cambiarlo, pero el valor por defecto deja de ser el equivocado.
+    const buscado = dias === 0 ? 'pagado' : 'pendiente';
+    for (const opt of estado.options) {
+        if (opt.textContent.trim().toLowerCase() === buscado) {
+            estado.value = opt.value;
+            break;
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.product-row').forEach(row => initProductSearch(row));
+    actualizarVencimiento();
+    calcTotales();
+});
+</script>
+{% endblock %}

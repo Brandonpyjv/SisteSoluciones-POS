@@ -1,0 +1,124 @@
+{% extends "layout.html" %}
+
+{% block title %}Facturas | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="h3 mb-1 text-gray-800 fw-bold">
+                <i class="bi bi-file-earmark-text text-primary me-2"></i>Gestión de Facturas
+            </h1>
+            <p class="text-muted mb-0 small">Administra y consulta todas las facturas del sistema.</p>
+        </div>
+        <a href="{{ url_for('new_invoice') }}"
+           class="btn btn-primary px-4 py-2 shadow-sm d-flex align-items-center gap-2"
+           style="border-radius: 8px; font-weight: 600;">
+            <i class="bi bi-plus-circle-fill"></i> Nueva Factura
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+        <div class="card-header bg-white py-3 border-bottom border-light">
+            <h6 class="m-0 font-weight-bold text-primary">Todas las Facturas</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr class="text-uppercase small fw-bold text-white" style="letter-spacing:0.5px;background:linear-gradient(135deg,#4e73df,#6ea0f5);">
+                            <th scope="col" class="ps-4" style="background:transparent;color:#fff;">N° Factura</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Fecha</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Cliente</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Cajero</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Método</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Total</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Empresa</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Estado</th>
+                            <th scope="col" class="pe-4 text-center" style="background:transparent;color:#fff;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="border-top-0">
+                        {% for invoice in all_invoices %}
+                        <tr style="transition: all 0.2s;">
+                            <td class="ps-4">
+                                <span class="fw-bold">{{ invoice.numero_factura or invoice.cod_factura }}</span>
+                                {% if invoice.tipo_factura == 'NC' %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size:0.6rem;">NC</span>
+                                {% elif invoice.tipo_factura == 'ND' %}
+                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size:0.6rem;">ND</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ invoice.fecha.strftime('%d/%m/%Y') if invoice.fecha else 'N/A' }}</td>
+                            <td>{{ invoice.cliente }}</td>
+                            <td class="text-muted">{{ invoice.usuario }}</td>
+                            <td><span class="small text-uppercase text-secondary">{{ invoice.metodo_pago }}</span></td>
+                            <td class="fw-bold text-dark text-end">${{ "{:,.2f}".format(invoice.total) }}</td>
+                            <td>
+                                <span class="badge border text-secondary fw-normal">
+                                    {{ invoice.empresa if invoice.empresa else 'Sin Empresa' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% set ep = (invoice.estado_pago or '').lower() %}
+                                {% if ep == 'paid' %}
+                                    <span class="badge rounded-pill bg-success-subtle text-success px-3 border border-success-subtle">Pagado</span>
+                                {% elif ep == 'pending' %}
+                                    <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis px-3 border border-warning-subtle">Pendiente</span>
+                                {% elif ep == 'partially paid' %}
+                                    <span class="badge rounded-pill bg-info-subtle text-info-emphasis px-3 border border-info-subtle">Pago Parcial</span>
+                                {% elif ep == 'overdue' %}
+                                    <span class="badge rounded-pill bg-danger-subtle text-danger px-3 border border-danger-subtle">Vencido</span>
+                                {% elif ep == 'anulada' %}
+                                    <span class="badge rounded-pill bg-dark-subtle text-dark-emphasis px-3 border border-dark-subtle">Anulada</span>
+                                {% elif ep == 'parcialmente anulada' %}
+                                    <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis px-3 border border-warning-subtle">Parc. Anulada</span>
+                                {% elif ep == 'cancelled' %}
+                                    <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis px-3 border border-secondary-subtle">Cancelado</span>
+                                {% elif ep == 'disputed' %}
+                                    <span class="badge rounded-pill bg-dark-subtle text-dark-emphasis px-3 border border-dark-subtle">Disputado</span>
+                                {% elif ep == 'refunded' %}
+                                    <span class="badge rounded-pill bg-primary-subtle text-primary px-3 border border-primary-subtle">Reembolsado</span>
+                                {% else %}
+                                    <span class="badge rounded-pill bg-light text-dark px-3">{{ etiqueta_estado(invoice.estado_pago) }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('view_invoice', numero_factura=invoice.numero_factura or invoice.cod_factura) }}"
+                                       class="btn btn-sm btn-light border text-primary" title="Ver detalle">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('invoice_pdf', invoice_id=invoice.cod_factura) }}"
+                                       class="btn btn-sm btn-light border text-danger" title="PDF" target="_blank">
+                                        <i class="bi bi-file-pdf"></i>
+                                    </a>
+                                    <a href="{{ url_for('delete_invoice', invoice_id=invoice.cod_factura) }}"
+                                       class="btn btn-sm btn-light border text-danger" title="Eliminar"
+                                       onclick="return confirm('¿Eliminar factura {{ invoice.numero_factura or invoice.cod_factura }}?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="bi bi-file-earmark-text display-4 d-block mb-3 text-secondary opacity-50"></i>
+                                No hay facturas registradas.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3 text-end">
+        <p class="text-muted small">Mostrando {{ all_invoices|length }} registros.</p>
+    </div>
+
+</div>
+{% endblock %}

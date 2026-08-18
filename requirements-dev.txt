@@ -1,0 +1,7 @@
+# Dependencias solo para desarrollo y pruebas. No hacen falta en el servidor.
+#   pip install -r requirements-dev.txt
+#   python -m pytest
+-r requirements.txt
+pytest==9.1.1
+# Lo necesita el TestClient de FastAPI para probar la API por HTTP.
+httpx==0.28.1

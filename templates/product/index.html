@@ -1,0 +1,130 @@
+{% extends "layout.html" %}
+
+{% block title %}Productos | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="h3 mb-1 text-gray-800 fw-bold">
+                <i class="bi bi-box-seam text-primary me-2"></i>Gestión de Productos
+            </h1>
+            <p class="text-muted mb-0 small">Administra el inventario, precios y stock de productos.</p>
+        </div>
+        {% if request.session.get('user', {}).get('rol') != 'CAJERO' %}
+        <a href="{{ url_for('product_new') }}"
+           class="btn btn-primary px-4 py-2 shadow-sm d-flex align-items-center gap-2"
+           style="border-radius: 8px; font-weight: 600;">
+            <i class="bi bi-plus-circle-fill"></i> Nuevo Producto
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+        <div class="card-header bg-white py-3 border-bottom border-light">
+            <h6 class="m-0 font-weight-bold text-primary">Todos los Productos</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr class="text-uppercase small fw-bold text-white" style="letter-spacing:0.5px;background:linear-gradient(135deg,#4e73df,#6ea0f5);">
+                            <th scope="col" class="ps-4" style="background:transparent;color:#fff;">ID</th>
+                            <th scope="col" style="background:transparent;color:#fff;">SKU</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Nombre</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Descripción</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Precio</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Stock</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Impuesto</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Unidad</th>
+                            <th scope="col" style="background:transparent;color:#fff;">Estado</th>
+                            {% if request.session.get('user', {}).get('rol') != 'CAJERO' %}
+                            <th scope="col" class="pe-4 text-center" style="background:transparent;color:#fff;">Acciones</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody class="border-top-0">
+                        {% for product in products %}
+                        <tr style="transition: all 0.2s;">
+                            <td class="ps-4 text-muted small">{{ product.cod_producto }}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border font-monospace">{{ product.sku }}</span>
+                            </td>
+                            <td><span class="fw-bold text-dark">{{ product.nombre }}</span></td>
+                            <td><span class="text-muted small">{{ product.descripcion }}</span></td>
+                            <td class="fw-bold text-dark">${{ "{:,.2f}".format(product.precio_unitario) }}</td>
+                            <td>
+                                {% if product.stock == 0 %}
+                                    <span class="text-muted fw-bold">0</span>
+                                    <span class="badge bg-secondary text-white border ms-1" style="font-size: 0.6rem;">Sin stock</span>
+                                {% elif product.stock <= product.stock_minimo %}
+                                    <span class="text-danger fw-bold">{{ product.stock }}</span>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 0.6rem;">Bajo</span>
+                                {% else %}
+                                    <span class="text-dark">{{ product.stock }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="small text-secondary">{{ product.tax_name }} ({{ product.tax_porcentaje }}%)</span>
+                            </td>
+                            <td>
+                                {% if product.unidad_medida in ['C62', '94'] %}
+                                    <span class="badge bg-light text-dark border fw-normal">Unidad</span>
+                                {% elif product.unidad_medida == 'WSD' %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-normal">Servicio</span>
+                                {% elif product.unidad_medida == 'KGM' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-normal">Kg</span>
+                                {% else %}
+                                    <span class="small text-uppercase text-secondary">{{ product.unidad_medida }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if product.activo == 1 %}
+                                    <span class="badge rounded-pill bg-success-subtle text-success px-3 border border-success-subtle">Activo</span>
+                                {% else %}
+                                    <span class="badge rounded-pill bg-secondary-subtle text-secondary px-3 border border-secondary-subtle">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            {% if request.session.get('user', {}).get('rol') != 'CAJERO' %}
+                            <td class="pe-4 text-center">
+                                <div class="btn-group" role="group">
+                                    {% if product.controla_stock %}
+                                    <a href="{{ url_for('inventory_kardex', product_id=product.cod_producto) }}"
+                                       class="btn btn-sm btn-light border text-primary" title="Ver kardex">
+                                        <i class="bi bi-journal-text"></i>
+                                    </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('edit_product', product_id=product.cod_producto) }}"
+                                       class="btn btn-sm btn-light border text-warning" title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <a href="{{ url_for('delete_product', product_id=product.cod_producto) }}"
+                                       class="btn btn-sm btn-light border text-danger" title="Eliminar"
+                                       onclick="return confirm('¿Eliminar producto {{ product.nombre }}?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="bi bi-box-seam display-4 d-block mb-3 text-secondary opacity-50"></i>
+                                No hay productos registrados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3 d-flex justify-content-between align-items-center">
+        <p class="text-muted small mb-0">Mostrando {{ products|length }} registros.</p>
+    </div>
+
+</div>
+{% endblock %}

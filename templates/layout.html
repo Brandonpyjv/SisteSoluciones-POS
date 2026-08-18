@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Siste Soluciones{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', path='img/favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='img/favicon-32.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', path='img/apple-touch-icon.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/main.css') }}">
+    <style>
+        body { padding-top: 60px; }
+        .sidebar { top: 60px; height: calc(100vh - 60px); }
+        .content { margin-left: 240px; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top shadow-sm" id="miNavbar"
+     style="background: linear-gradient(135deg, #4e73df, #6ea0f5);">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+            <img src="{{ url_for('static', path='img/logodark.png') }}" alt="Logo" width="35" height="35">
+            <span class="fw-bold small tracking-wider">SISTE SOLUCIONES</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNavbar">
+            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-lg-4">
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-2" href="{{ url_for('new_invoice') }}">
+                        <i class="bi bi-plus-square"></i> Nueva Factura
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-2" href="{{ url_for('product') }}">
+                        <i class="bi bi-box"></i> Productos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-2" href="{{ url_for('customer') }}">
+                        <i class="bi bi-person-plus"></i> Clientes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-2" href="{{ url_for('invoice') }}">
+                        <i class="bi bi-receipt"></i> Facturas
+                    </a>
+                </li>
+            </ul>
+
+            {% set sesion = request.session.get('user', {}) %}
+            <div class="d-flex align-items-center gap-3">
+                <div class="dropdown">
+                    <a class="d-flex align-items-center text-decoration-none dropdown-toggle" href="#"
+                       id="userDropdown" data-bs-toggle="dropdown">
+                        <div class="text-end me-2 d-none d-sm-block">
+                            <div class="text-white small fw-bold" style="line-height: 1;">
+                                {{ sesion.get('nombre') or 'Usuario' }}
+                            </div>
+                            <small class="text-white-50" style="font-size: 0.7rem;">
+                                {{ role_label(sesion.get('rol')) }}
+                            </small>
+                        </div>
+                        <img src="{{ avatar_url(sesion.get('foto')) }}"
+                             alt="Foto de {{ sesion.get('nombre') or 'usuario' }}"
+                             width="35" height="35"
+                             class="rounded-circle border border-2 border-white shadow-sm"
+                             style="object-fit:cover;background:#fff;">
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                        <li class="px-3 py-2 border-bottom">
+                            <div class="fw-bold small text-dark">{{ sesion.get('nombre') or 'Usuario' }}</div>
+                            <div class="text-muted" style="font-size:0.72rem;">{{ sesion.get('correo') }}</div>
+                            {% if sesion.get('empresa_nombre') %}
+                            <div class="text-muted" style="font-size:0.72rem;">
+                                <i class="bi bi-building me-1"></i>{{ sesion.get('empresa_nombre') }}
+                            </div>
+                            {% endif %}
+                        </li>
+                        <li><a class="dropdown-item py-2" href="{{ url_for('user_photo_form', user_id=sesion.get('cod_usuario')) }}">
+                            <i class="bi bi-camera me-2"></i> Cambiar mi foto</a></li>
+                        {% if sesion.get('rol') != 'CAJERO' %}
+                        <li><a class="dropdown-item py-2" href="{{ url_for('users') }}">
+                            <i class="bi bi-people me-2"></i> Usuarios</a></li>
+                        {% endif %}
+                        <li><a class="dropdown-item py-2" href="{{ url_for('setting') }}">
+                            <i class="bi bi-gear me-2"></i> Configuración</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item py-2 text-danger" href="{{ url_for('logout') }}">
+                            <i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="sidebar d-flex flex-column">
+    {% set rol = request.session.get('user', {}).get('rol', '') %}
+    <div class="flex-grow-1 overflow-y-auto px-2 custom-scrollbar">
+
+        <div class="mb-2">
+            <a class="d-flex justify-content-between align-items-center text-uppercase opacity-75 sidebar-header"
+               data-bs-toggle="collapse" href="#collapseBilling" role="button" aria-expanded="true">
+                <span><i class="bi bi-receipt me-2"></i> Facturación</span>
+                <i class="bi bi-chevron-down small"></i>
+            </a>
+            <div class="collapse show" id="collapseBilling">
+                <a href="{{ url_for('invoice') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-file-earmark-text me-1"></i> Facturas
+                </a>
+                <a href="{{ url_for('new_invoice') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-plus-circle me-1"></i> Nueva Factura
+                </a>
+                {% if rol != 'CAJERO' %}
+                <a href="{{ url_for('invoice_payments') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-credit-card me-1"></i> Estados de Pago
+                </a>
+                {% endif %}
+                <a href="{{ url_for('discount') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-tag me-1"></i> Descuentos
+                </a>
+                {% if rol != 'CAJERO' %}
+                <a href="{{ url_for('invoice_taxes') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-percent me-1"></i> Impuestos
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mb-2">
+            <a class="d-flex justify-content-between align-items-center text-uppercase opacity-75 sidebar-header"
+               data-bs-toggle="collapse" href="#collapseCatalog" role="button">
+                <span><i class="bi bi-box-seam me-2"></i> Catálogo</span>
+                <i class="bi bi-chevron-down small"></i>
+            </a>
+            <div class="collapse" id="collapseCatalog">
+                <a href="{{ url_for('product') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-box me-1"></i> Productos
+                </a>
+                {% if rol != 'CAJERO' %}
+                <a href="{{ url_for('inventory') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-boxes me-1"></i> Inventario
+                </a>
+                <a href="{{ url_for('inventory_movimientos') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-arrow-left-right me-1"></i> Movimientos
+                </a>
+                <a href="{{ url_for('payment_methods') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-wallet2 me-1"></i> Métodos de Pago
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mb-2">
+            <a class="d-flex justify-content-between align-items-center text-uppercase opacity-75 sidebar-header"
+               data-bs-toggle="collapse" href="#collapseMgmt" role="button">
+                <span><i class="bi bi-person-badge me-2"></i> Administración</span>
+                <i class="bi bi-chevron-down small"></i>
+            </a>
+            <div class="collapse" id="collapseMgmt">
+                <a href="{{ url_for('customer') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-people me-1"></i> Clientes
+                </a>
+                {% if rol != 'CAJERO' %}
+                <a href="{{ url_for('reports') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-file-earmark-bar-graph me-1"></i> Reportes
+                </a>
+                <a href="{{ url_for('branches') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-building me-1"></i> Empresas
+                </a>
+                <a href="{{ url_for('users') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-person-gear me-1"></i> Usuarios
+                </a>
+                <a href="{{ url_for('logs') }}" class="ps-4 py-2 small">
+                    <i class="bi bi-journal-text me-1"></i> Logs
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <div class="mt-auto">
+        <hr class="mx-3 border-light opacity-25">
+        <a href="{{ url_for('setting') }}" class="ps-3 py-2 small d-flex align-items-center">
+            <i class="bi bi-gear me-2"></i> Configuración
+        </a>
+    </div>
+</div>
+
+<div class="content">
+    {% block content %}
+    {% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', path='js/validacion.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
