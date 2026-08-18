@@ -56,7 +56,12 @@ copy .env.example .env
 # 4 · Migraciones y datos del negocio
 python migrate.py
 python seed_negocio.py
+python seed_catalogo.py
 ```
+
+> `seed_negocio.py` deja los datos de la empresa y limpia la operación de ejemplo
+> que trae el volcado. `seed_catalogo.py` carga las 20 referencias que vende el
+> negocio. Los dos son idempotentes.
 
 > El archivo del volcado se llama `factugest.sql` porque es el esquema heredado.
 > Se conserva el nombre a propósito: cambiarlo solo escondería de dónde viene.
