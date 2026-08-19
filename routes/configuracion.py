@@ -38,6 +38,7 @@ def configuracion(request: Request):
             "empresas":     _cuantos("empresas"),
             "usuarios":     _cuantos("usuarios", "WHERE activo = 1"),
             "pendientes":   contar_pendientes(),
+            "auditoria":    _cuantos("auditoria"),
         },
         "factugest": {
             "url": os.getenv("FACTUGEST_URL") or "http://127.0.0.1:8000",

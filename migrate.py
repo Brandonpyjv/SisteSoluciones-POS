@@ -496,6 +496,74 @@ def migracion_007_quitar_tablas_de_factugest(cursor):
     return pasos
 
 
+# ── 010 · Auditoría ─────────────────────────────────────────────────────────
+
+def migracion_010_auditoria(cursor):
+    """Quién hizo qué, cuándo y desde dónde.
+
+    Había una tabla `logs` con cinco columnas en la que nunca se escribió: sin
+    quién, sin sobre qué, sin desde dónde. Un registro que no se llena no es un
+    registro; era un lugar donde algún día se iba a escribir algo.
+
+    Tres decisiones que conviene entender antes de tocar esto:
+
+    **Una sola tabla y no una por módulo.** La auditoría se lee en orden
+    cronológico y se filtra —qué hizo Yuliana ayer, qué le pasó a la factura
+    FG60—. Repartida en ocho tablas, cada una de esas preguntas sería una unión
+    de ocho consultas.
+
+    **Se guarda el nombre del usuario, no solo su código.** Si mañana se borra o
+    se renombra, el registro tiene que seguir diciendo quién fue. Una auditoría
+    que cambia cuando cambian los datos que audita no sirve de prueba.
+
+    **La descripción se escribe en el momento.** No se reconstruye después
+    leyendo la factura, porque la factura pudo anularse, cambiar o desaparecer.
+    Lo que quedó escrito es lo que pasó ese día.
+    """
+    pasos = []
+
+    if not _table_exists(cursor, "auditoria"):
+        cursor.execute("""
+            CREATE TABLE auditoria (
+                cod_auditoria  BIGINT       NOT NULL AUTO_INCREMENT,
+                fecha          DATETIME(6)  NOT NULL,
+                cod_usuario    INT(11)               DEFAULT NULL,
+                usuario_nombre VARCHAR(120)          DEFAULT NULL COMMENT 'Copia del nombre: el registro sobrevive al usuario',
+                usuario_rol    VARCHAR(20)           DEFAULT NULL,
+                accion         VARCHAR(30)  NOT NULL COMMENT 'INGRESO | SALIDA | CREO | ACTUALIZO | ELIMINO | EMITIO | ANULO | ...',
+                entidad        VARCHAR(40)           DEFAULT NULL COMMENT 'Sobre que se actuo: factura, cliente, producto...',
+                entidad_id     VARCHAR(60)           DEFAULT NULL COMMENT 'Su identificador, como texto: hay codigos y numeros de factura',
+                descripcion    VARCHAR(300) NOT NULL COMMENT 'Una frase legible, escrita en el momento',
+                cambios        MEDIUMTEXT            DEFAULT NULL COMMENT 'JSON con el antes y el despues, solo en modificaciones',
+                ip             VARCHAR(45)           DEFAULT NULL,
+                PRIMARY KEY (cod_auditoria),
+                KEY idx_auditoria_fecha (fecha),
+                KEY idx_auditoria_usuario (cod_usuario),
+                KEY idx_auditoria_entidad (entidad, entidad_id),
+                KEY idx_auditoria_accion (accion),
+                -- ON DELETE SET NULL y no CASCADE: borrar un usuario no puede
+                -- borrar el rastro de lo que hizo. Para eso queda su nombre.
+                CONSTRAINT fk_auditoria_usuario FOREIGN KEY (cod_usuario)
+                    REFERENCES usuarios (cod_usuario) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+        pasos.append("tabla auditoria creada")
+
+    # La tabla vieja se va: nunca se escribió en ella y mantenerla al lado de la
+    # nueva solo invita a que alguien escriba en la equivocada.
+    if _table_exists(cursor, "logs"):
+        cursor.execute("SELECT COUNT(*) FROM logs")
+        cuantos = cursor.fetchall()[0]
+        cuantos = list(cuantos.values())[0] if isinstance(cuantos, dict) else cuantos[0]
+        if cuantos:
+            pasos.append(f"tabla logs conservada: tiene {cuantos} fila(s) que revisar")
+        else:
+            cursor.execute("DROP TABLE logs")
+            pasos.append("tabla logs eliminada (estaba vacía)")
+
+    return pasos
+
+
 MIGRACIONES = [
     ("001", "Módulo de inventario: kardex de movimientos y flag controla_stock",
      migracion_001_inventario),
@@ -511,6 +579,8 @@ MIGRACIONES = [
      migracion_006_emision_factugest),
     ("007", "Quitar las tablas del middleware heredadas del fork",
      migracion_007_quitar_tablas_de_factugest),
+    ("010", "Auditoría: quién hizo qué, cuándo y desde dónde",
+     migracion_010_auditoria),
 ]
 
 

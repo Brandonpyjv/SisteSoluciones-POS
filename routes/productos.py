@@ -7,6 +7,7 @@ from services.inventory_service import ajustar_stock, registrar_saldo_inicial
 from services.taxes import get_all_invoice_taxes
 from routes.formularios import formulario_invalido
 from services import listados
+from services import auditoria_service as auditoria
 from templates_config import templates
 
 router = APIRouter(prefix="/products")
@@ -96,6 +97,9 @@ def create_product_post(
         cod_usuario=request.session.get("user", {}).get("cod_usuario"),
         observaciones="Saldo inicial al crear el producto",
     )
+    auditoria.registrar(request, "CREO", "producto", product_id,
+                        f"Creó «{d['nombre']}» ({d['sku']}) a ${d['precio_unitario']:,.0f} "
+                        f"con {d['stock']} unidades")
     return RedirectResponse(url="/products/product", status_code=303)
 
 
@@ -155,10 +159,17 @@ def update_product_post(
         registrar_saldo_inicial(product_id, cod_usuario=cod_usuario,
                                 observaciones="Saldo de apertura al activar control de inventario")
 
+    auditoria.registrar(request, "ACTUALIZO", "producto", product_id,
+                        f"Modificó «{d['nombre']}» ({d['sku']})",
+                        cambios=auditoria.diferencias(anterior, get_product_by_id(product_id)))
     return RedirectResponse(url="/products/product", status_code=303)
 
 
 @router.get("/product/delete/{product_id}", name="delete_product")
-def delete_product_get(product_id: int):
+def delete_product_get(request: Request, product_id: int):
+    producto = get_product_by_id(product_id)
     delete_product(product_id)
+    if producto:
+        auditoria.registrar(request, "ELIMINO", "producto", product_id,
+                            f"Eliminó «{producto['nombre']}» ({producto['sku']})")
     return RedirectResponse(url="/products/product", status_code=302)

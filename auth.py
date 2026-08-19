@@ -59,7 +59,7 @@ def puede_cambiar_foto(actor: dict, objetivo: dict) -> bool:
 # La pantalla de pendientes de emitir no esta aqui a proposito: el cajero es quien
 # ve que una venta se quedo sin factura y quien la reintenta.
 _ADMIN_ONLY_PREFIXES = (
-    "/users", "/logs", "/branches",
+    "/users", "/auditoria", "/branches",
     "/payment_methods", "/invoice_taxes", "/invoice_payments",
     "/inventory", "/reports", "/configuracion",
 )

@@ -8,6 +8,7 @@ from services.branches import get_all_branches
 from routes.formularios import formulario_invalido
 from auth import can_manage, ROLE_HIERARCHY, ROLE_LABELS
 from services import listados
+from services import auditoria_service as auditoria
 from templates_config import templates
 
 router = APIRouter(prefix="/users")
@@ -107,6 +108,9 @@ async def create_user_post(
     nuevo_id = create_user(d["nombre"], d["correo"], d["contrasena"], d["rol"],
                            d["cod_empresa"])
     await _aplicar_foto(foto, nuevo_id)
+    auditoria.registrar(request, "CREO", "usuario", nuevo_id,
+                        f"Creó al usuario {d['nombre']} ({d['correo']}) con rol "
+                        f"{role_label(d['rol'])}")
     return RedirectResponse(url="/users", status_code=303)
 
 
@@ -156,6 +160,14 @@ async def update_user_post(
     update_user(user_id, d["nombre"], d["correo"], d["rol"],
                 d["contrasena"] or None, d["cod_empresa"])
     await _aplicar_foto(foto, user_id, target.get("foto"))
+    # La contraseña nunca entra al registro, ni siquiera para decir que cambió de
+    # valor: lo que importa es que se cambió, y eso ya lo dice la acción.
+    auditoria.registrar(
+        request, "ACTUALIZO", "usuario", user_id,
+        f"Modificó al usuario {d['nombre']}"
+        + (" y le cambió la contraseña" if d.get("contrasena") else ""),
+        cambios=auditoria.diferencias(target, get_user_by_id(user_id),
+                                      campos={"nombre", "correo", "rol", "cod_empresa"}))
     return RedirectResponse(url="/users", status_code=303)
 
 
@@ -166,4 +178,6 @@ def delete_user_get(request: Request, user_id: int):
     if not target or not can_manage(actor.get("rol", ""), target.get("rol", "")):
         return RedirectResponse(url="/users", status_code=302)
     delete_user(user_id)
+    auditoria.registrar(request, "ELIMINO", "usuario", user_id,
+                        f"Desactivó al usuario {target['nombre']} ({target['correo']})")
     return RedirectResponse(url="/users", status_code=302)

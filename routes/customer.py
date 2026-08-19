@@ -8,6 +8,7 @@ from services.ubicacion_service import (get_all_departamentos, get_municipio_by_
                                         get_municipios_by_departamento)
 from routes.formularios import formulario_invalido
 from services import listados
+from services import auditoria_service as auditoria
 from templates_config import templates
 
 router = APIRouter(prefix="/customer")
@@ -106,9 +107,11 @@ def create_customer_post(
                                    _contexto_de_lo_enviado(enviado), enviado)
 
     d = v.datos
-    create_customer(d["full_name"], d["document_type"], d["document_number"],
-                    d["phone"], d["email"], d["address"], d["cod_municipio"],
-                    d["pais"], d["tipo_persona"], d["regimen_tributario"])
+    nuevo = create_customer(d["full_name"], d["document_type"], d["document_number"],
+                            d["phone"], d["email"], d["address"], d["cod_municipio"],
+                            d["pais"], d["tipo_persona"], d["regimen_tributario"])
+    auditoria.registrar(request, "CREO", "cliente", nuevo,
+                        f"Creó el cliente {d['full_name']} ({d['document_number']})")
     return RedirectResponse(url="/customer", status_code=303)
 
 
@@ -152,14 +155,26 @@ def update_customer_post(
                                    _contexto_de_lo_enviado(enviado, customer=actual),
                                    enviado)
 
+    # Se guarda cómo estaba antes para poder anotar qué cambió, no la fila entera.
+    anterior = get_customer_by_id(customer_id)
+
     d = v.datos
     update_customer(customer_id, d["full_name"], d["document_type"], d["document_number"],
                     d["phone"], d["email"], d["address"], d["cod_municipio"],
                     d["pais"], d["tipo_persona"], d["regimen_tributario"])
+    auditoria.registrar(
+        request, "ACTUALIZO", "cliente", customer_id,
+        f"Modificó el cliente {d['full_name']}",
+        cambios=auditoria.diferencias(anterior, get_customer_by_id(customer_id)))
     return RedirectResponse(url="/customer", status_code=303)
 
 
 @router.get("/delete/{customer_id}", name="delete_customer")
-def delete_customer_get(customer_id: int):
+def delete_customer_get(request: Request, customer_id: int):
+    cliente = get_customer_by_id(customer_id)
     delete_customer(customer_id)
+    if cliente:
+        auditoria.registrar(request, "ELIMINO", "cliente", customer_id,
+                            f"Desactivó el cliente {cliente['full_name']} "
+                            f"({cliente['document_number']})")
     return RedirectResponse(url="/customer", status_code=302)

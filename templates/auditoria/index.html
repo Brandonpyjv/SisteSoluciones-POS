@@ -1,0 +1,136 @@
+{% extends "layout.html" %}
+{% import "_tabla.html" as t %}
+
+{% block title %}Auditoría | Siste Soluciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 text-gray-800 fw-bold">
+            <i class="bi bi-journal-text text-primary me-2"></i>Auditoría
+        </h1>
+        <p class="text-muted mb-0 small">
+            Quién hizo qué, cuándo y desde dónde. El registro no se puede editar ni borrar.
+        </p>
+    </div>
+
+    {{ t.tarjetas([
+        ('Registros', "{:,}".format(resumen.total), 'bi-list-ul', '#e8edff', 'text-primary'),
+        ('Hoy', resumen.hoy, 'bi-calendar-day', '#e6f9f1', 'text-success'),
+        ('Usuarios con actividad', resumen.usuarios, 'bi-people', '#fff3e0', 'text-warning'),
+        ('Acciones delicadas', resumen.delicadas, 'bi-shield-exclamation', '#fce4ec', 'text-danger')
+    ]) }}
+
+    {% call t.filtros(url_for('auditoria'), filtros, 'Descripción, documento, usuario o IP…') %}
+        <div class="col-lg-2 col-md-4">
+            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Acción</label>
+            <select name="accion" class="form-select form-select-sm bg-light border-0">
+                <option value="">Todas</option>
+                {% for clave, etiqueta in acciones.items() %}
+                <option value="{{ clave }}" {{ 'selected' if filtros.accion == clave }}>{{ etiqueta }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Sobre</label>
+            <select name="entidad" class="form-select form-select-sm bg-light border-0">
+                <option value="">Todo</option>
+                {% for e in entidades %}
+                <option value="{{ e }}" {{ 'selected' if filtros.entidad == e }}>{{ e|replace('_', ' ')|title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Usuario</label>
+            <select name="usuario" class="form-select form-select-sm bg-light border-0">
+                <option value="">Todos</option>
+                {% for u in usuarios %}
+                <option value="{{ u }}" {{ 'selected' if filtros.usuario == u }}>{{ u }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Desde</label>
+            <input type="date" name="desde" value="{{ filtros.desde }}"
+                   class="form-control form-control-sm bg-light border-0">
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Hasta</label>
+            <input type="date" name="hasta" value="{{ filtros.hasta }}"
+                   class="form-control form-control-sm bg-light border-0">
+        </div>
+    {% endcall %}
+
+    <div class="card border-0 shadow-sm" style="border-radius:12px;overflow:hidden;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr class="tabla-encabezado">
+                            <th class="ps-4">Cuándo</th>
+                            <th>Quién</th>
+                            <th>Qué hizo</th>
+                            <th>Sobre</th>
+                            <th class="pe-4">Desde</th>
+                        </tr>
+                    </thead>
+                    <tbody class="border-top-0">
+                        {% for r in registros %}
+                        <tr>
+                            <td class="ps-4 text-nowrap">
+                                <div class="small">{{ r.fecha.strftime('%d/%m/%Y') }}</div>
+                                <div class="text-muted small font-monospace">{{ r.fecha.strftime('%H:%M:%S') }}</div>
+                            </td>
+                            <td>
+                                <div class="fw-bold small">{{ r.usuario_nombre or 'Sistema' }}</div>
+                                <div class="text-muted small">
+                                    {{ role_label(r.usuario_rol) if r.usuario_rol else '' }}
+                                    {% if r.cod_usuario and not r.usuario_actual %}
+                                    <span class="badge bg-light text-muted border ms-1">cuenta eliminada</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill bg-{{ colores.get(r.accion, 'secondary') }}-subtle
+                                             text-{{ colores.get(r.accion, 'secondary') }}
+                                             border border-{{ colores.get(r.accion, 'secondary') }}-subtle px-3">
+                                    {{ acciones.get(r.accion, r.accion) }}
+                                </span>
+                                <div class="small mt-1">{{ r.descripcion }}</div>
+                                {% if r.cambios %}
+                                <details class="mt-1">
+                                    <summary class="text-muted small" style="cursor:pointer;">Ver qué cambió</summary>
+                                    <pre class="bg-light border rounded p-2 small mt-1 mb-0"
+                                         style="white-space:pre-wrap;">{{ r.cambios }}</pre>
+                                </details>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if r.entidad %}
+                                <span class="text-muted">{{ r.entidad|replace('_', ' ') }}</span>
+                                <div class="font-monospace">{{ r.entidad_id or '' }}</div>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="pe-4 text-muted small font-monospace">{{ r.ip or '—' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="bi bi-journal display-4 d-block mb-3 opacity-25"></i>
+                                {% if filtros.q or filtros.accion or filtros.entidad or filtros.usuario or filtros.desde %}
+                                Ningún registro coincide con la búsqueda.
+                                {% else %}Todavía no hay actividad registrada.{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {{ t.pie(meta, url_for('auditoria'), consulta, 'registros') }}
+
+</div>
+{% endblock %}

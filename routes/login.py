@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Form
 from fastapi.responses import RedirectResponse
 from services.user_service import get_user_by_email
 from auth import verify_password
+from services import auditoria_service as auditoria
 from templates_config import templates
 
 router = APIRouter()
@@ -24,6 +25,12 @@ def login_post(
 ):
     user = get_user_by_email(correo)
     if not user or not verify_password(contrasena, user["contrasena"]):
+        # El intento fallido se registra sin decir si el error fue el correo o la
+        # contraseña: el registro sirve para ver un ataque, no para confirmarle a
+        # nadie qué correos existen.
+        auditoria.registrar(request, "INGRESO_FALLIDO", "sesion", correo[:60],
+                            f"Intento de ingreso fallido con el correo {correo}",
+                            usuario={"nombre": "Desconocido"})
         return templates.TemplateResponse(
             request, "login.html",
             {"error": True, "logout": False},
@@ -39,10 +46,16 @@ def login_post(
         "empresa_nombre": user.get("empresa_nombre"),
         "foto":          user.get("foto"),
     }
+    auditoria.registrar(request, "INGRESO", "sesion", user["cod_usuario"],
+                        f"{user['nombre']} inició sesión")
     return RedirectResponse("/", status_code=303)
 
 
 @router.get("/logout", name="logout")
 def logout(request: Request):
+    usuario = request.session.get("user", {})
+    if usuario:
+        auditoria.registrar(request, "SALIDA", "sesion", usuario.get("cod_usuario"),
+                            f"{usuario.get('nombre')} cerró sesión")
     request.session.clear()
     return RedirectResponse("/login?logout=true", status_code=302)

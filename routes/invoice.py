@@ -24,6 +24,7 @@ from services.factugest_client import FactugestError, configurado, descargar_pdf
 from services.emision_service import (emitir as emitir_en_factugest,
                                       pendientes_de_emitir)
 from services import listados
+from services import auditoria_service as auditoria
 from templates_config import templates
 from database import get_one, get_many, execute_update, transaction
 
@@ -277,6 +278,9 @@ async def create_invoice_post(
     except RangoResolucionAgotadoError as e:
         return _render_invoice_form(request, error=str(e), status_code=422)
 
+    auditoria.registrar(request, "CREO", "venta", numero_factura,
+                        f"Registró la venta {numero_factura} a "
+                        f"{cliente.get('full_name') or 'un cliente'} por ${total:,.0f}")
     return RedirectResponse(url=f"/invoice/{numero_factura}", status_code=303)
 
 
@@ -316,6 +320,9 @@ def emitir_pendientes(request: Request):
         try:
             emitir_en_factugest(completa)
             emitidas += 1
+            auditoria.registrar(request, "EMITIO", "venta", venta["numero_factura"],
+                                f"Emitió electrónicamente {venta['numero_factura']} "
+                                "desde la cola de pendientes")
         except FactugestError as e:
             fallidas += 1
             motivo = motivo or e.detalle
@@ -510,6 +517,10 @@ async def create_nota_credito_post(
         "UPDATE empresas SET consecutivo_nc = %s WHERE cod_empresa = %s",
         (consec_nc + 1, cod_empresa)
     )
+    auditoria.registrar(
+        request, "ANULO", "venta", inv.get("numero_factura"),
+        f"Emitió la nota crédito {numero_nc} sobre {inv.get('numero_factura')} "
+        f"({'anulación total' if tipo_nc == 'total' else 'devolución parcial'}): {motivo}")
     return RedirectResponse(url=f"/invoice/{numero_nc}", status_code=303)
 
 
@@ -605,6 +616,9 @@ async def create_nota_debito_post(
         "UPDATE empresas SET consecutivo_nd = %s WHERE cod_empresa = %s",
         (consec_nd + 1, cod_empresa)
     )
+    auditoria.registrar(request, "CREO", "venta", numero_nd,
+                        f"Emitió la nota débito {numero_nd} sobre "
+                        f"{inv.get('numero_factura')} por ${total_nd:,.0f}: {motivo}")
     return RedirectResponse(url=f"/invoice/{numero_nd}", status_code=303)
 
 
@@ -632,8 +646,17 @@ def emitir_factura_electronica(request: Request, invoice_id: int,
 
     from urllib.parse import quote
     try:
-        emitir_en_factugest(venta)
+        documento = emitir_en_factugest(venta)
+        auditoria.registrar(
+            request, "EMITIO", "venta", venta["numero_factura"],
+            f"Emitió electrónicamente {venta['numero_factura']}"
+            + (f"; FactuGest la numeró {documento['numero']}"
+               if isinstance(documento, dict) and documento.get("numero") else ""))
     except FactugestError as e:
+        # El fallo también deja rastro: es lo que se mira cuando alguien pregunta
+        # por qué una venta lleva días sin factura.
+        auditoria.registrar(request, "EMITIO", "venta", venta["numero_factura"],
+                            f"No se pudo emitir {venta['numero_factura']}: {e.detalle}")
         if destino:
             return RedirectResponse(
                 url=f"{destino}?emitidas=0&fallidas=1&motivo={quote(e.detalle)}",
