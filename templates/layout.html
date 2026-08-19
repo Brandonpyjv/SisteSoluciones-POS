@@ -50,7 +50,7 @@
 
         <div class="collapse navbar-collapse" id="mainNavbar">
             <div class="ms-auto d-flex align-items-center gap-3">
-                <a href="{{ url_for('new_invoice') }}"
+                <a href="{{ url_for('new_invoice_nueva') }}"
                    class="btn btn-light btn-sm fw-bold px-3 d-none d-sm-inline-flex align-items-center gap-2">
                     <i class="bi bi-plus-circle"></i> Nueva venta
                 </a>
@@ -108,7 +108,10 @@
         <div class="sidebar-grupo">
             <div class="sidebar-titulo">Ventas</div>
             {{ item(url_for('invoice'), 'bi-receipt', 'Facturas', exacto=true) }}
-            {{ item(url_for('new_invoice'), 'bi-plus-circle', 'Nueva venta') }}
+            {{ item(url_for('new_invoice_nueva'), 'bi-plus-circle', 'Nueva venta') }}
+            {# Mientras se compara la vista nueva con la anterior, las dos quedan a mano.
+               Cuando la nueva quede aprobada, esta línea y la plantilla vieja se van. #}
+            {{ item(url_for('new_invoice'), 'bi-clock-history', 'Nueva venta (anterior)') }}
             {{ item(url_for('facturas_pendientes'), 'bi-hourglass-split', 'Pendientes de emitir',
                     insignia=por_emitir or none) }}
             {{ item(url_for('customer'), 'bi-people', 'Clientes') }}

@@ -28,6 +28,11 @@ def validar_factura(datos: dict) -> Validador:
         ("cod_pago", "pagos_factura", "cod_pago_factura", "El estado de pago"),
     ):
         v.campo(campo, entero, datos.get(campo), minimo=1)
+        # `entero` no sabe qué campo está validando y contesta «Es obligatorio»,
+        # que en una lista de errores no dice cuál de los tres falta.
+        if campo in v.errores:
+            v.errores[campo] = (f"{etiqueta} es obligatorio" if not datos.get(campo)
+                                else f"{etiqueta} no es válido")
         if campo in v.datos and not get_one(
                 f"SELECT {llave} FROM {tabla} WHERE {llave} = %s", (v.datos[campo],)):
             v.errores[campo] = f"{etiqueta} seleccionado no existe"

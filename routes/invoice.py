@@ -35,7 +35,8 @@ def invoice(request: Request):
     return templates.TemplateResponse(request, "invoice/index.html", {"all_invoices": data})
 
 
-def _render_invoice_form(request: Request, error: str = None, status_code: int = 200):
+def _render_invoice_form(request: Request, error: str = None, status_code: int = 200,
+                         plantilla: str = "invoice/form.html"):
     session_user = request.session.get("user", {})
     cod_empresa = session_user.get("cod_empresa")
 
@@ -57,7 +58,7 @@ def _render_invoice_form(request: Request, error: str = None, status_code: int =
         "SELECT cod_descuento, descripcion, porcentaje FROM descuentos "
         "WHERE aplica_a_factura = 1 ORDER BY descripcion"
     )
-    return templates.TemplateResponse(request, "invoice/form.html", {
+    return templates.TemplateResponse(request, plantilla, {
         "empresa": empresa,
         "metodos_pago": get_all_payment_methods(),
         "pagos_factura": get_all_invoice_payments(),
@@ -67,50 +68,73 @@ def _render_invoice_form(request: Request, error: str = None, status_code: int =
     }, status_code=status_code)
 
 
+# Las dos vistas conviven mientras se compara la nueva con la anterior. Comparten
+# el `POST`, la validación y el guardado: lo único distinto es la pantalla, así que
+# probar la nueva no puede cambiar cómo se registra una venta.
+VISTAS = {"nueva": "invoice/form_nueva.html", "anterior": "invoice/form.html"}
+
+
 @router.get("/new", name="new_invoice")
 def new_invoice(request: Request):
+    """La vista anterior. Se conserva hasta que la nueva quede aprobada."""
     return _render_invoice_form(request)
+
+
+@router.get("/nueva", name="new_invoice_nueva")
+def new_invoice_nueva(request: Request):
+    """La vista nueva: el mismo formulario, organizado como un paso a paso."""
+    return _render_invoice_form(request, plantilla=VISTAS["nueva"])
 
 
 @router.post("/new", name="create_invoice")
 async def create_invoice_post(
     request: Request,
-    cod_cliente: str = Form(...),
-    cod_metodo_pago: str = Form(...),
-    cod_pago: str = Form(...),
+    # Ninguno es obligatorio *para FastAPI*, y es a propósito: si lo fueran, una
+    # venta enviada sin cliente o sin productos se rechazaría antes de llegar a
+    # `validar_factura` y el cajero vería un JSON crudo en lugar de su formulario
+    # con el error señalado. La obligatoriedad la impone el validador, que sabe
+    # decirlo en español.
+    cod_cliente: str = Form(""),
+    cod_metodo_pago: str = Form(""),
+    cod_pago: str = Form(""),
     tipo_factura: str = Form("FV"),
     observaciones: str = Form(""),
-    cod_producto: List[str] = Form(...),
+    cod_producto: Optional[List[str]] = Form(None),
     # El formulario también envía `precio_unitario`, pero no se declara a
     # propósito: el precio sale de la base. Ver validar_factura.
-    cantidad: List[str] = Form(...),
+    cantidad: Optional[List[str]] = Form(None),
     descuento_porcentaje: Optional[List[str]] = Form(None),
     descuento_descripcion: Optional[List[str]] = Form(None),
     cod_descuento_factura: Optional[str] = Form(None),
     valor_descuento_factura: str = Form("0"),
     plazo_pago: str = Form("0"),
+    # Desde qué pantalla se envió, para devolver los errores a esa misma y no a
+    # la otra. No influye en nada más.
+    vista: str = Form("anterior"),
 ):
+    plantilla = VISTAS.get(vista, VISTAS["anterior"])
     fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Los arreglos de la tabla de productos vienen en paralelo y tienen que
     # cuadrar entre sí: un largo distinto significa que la petición no la armó el
     # formulario, y leer por índice reventaría con un IndexError.
+    productos_enviados = cod_producto or []
     cantidades = cantidad or []
     descuentos = descuento_porcentaje or []
     descripciones = descuento_descripcion or []
-    if len(cantidades) != len(cod_producto):
+    if len(cantidades) != len(productos_enviados):
         return _render_invoice_form(
             request, error="Los datos de los productos llegaron incompletos.",
-            status_code=422)
+            status_code=422, plantilla=plantilla)
 
     lineas_enviadas = [
         {
-            "cod_producto": cod_producto[i],
+            "cod_producto": productos_enviados[i],
             "cantidad": cantidades[i],
             "descuento_porcentaje": descuentos[i] if i < len(descuentos) else 0,
             "descuento_descripcion": descripciones[i] if i < len(descripciones) else "",
         }
-        for i in range(len(cod_producto))
+        for i in range(len(productos_enviados))
     ]
 
     v = validar_factura({
@@ -122,7 +146,8 @@ async def create_invoice_post(
         "lineas": lineas_enviadas,
     })
     if not v.valido:
-        return _render_invoice_form(request, error=v.resumen(), status_code=422)
+        return _render_invoice_form(request, error=v.resumen(), status_code=422,
+                                    plantilla=plantilla)
 
     d = v.datos
     cod_cliente = d["cod_cliente"]
@@ -162,7 +187,7 @@ async def create_invoice_post(
             for f in faltantes
         )
         return _render_invoice_form(request, error=f"Stock insuficiente — {detalle}",
-                                    status_code=422)
+                                    status_code=422, plantilla=plantilla)
 
     session_user = request.session.get("user", {})
     cod_usuario = session_user.get("cod_usuario", 1)

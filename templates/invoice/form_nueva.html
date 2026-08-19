@@ -1,0 +1,641 @@
+{% extends "layout.html" %}
+
+{#
+   Vista nueva de creación de factura.
+
+   El formulario anterior mostraba todos los campos a la vez y dejaba que cada
+   quien decidiera por dónde empezar. Este los ordena como las tres preguntas que
+   una persona se hace al facturar, en el orden en que se las hace:
+
+       1. ¿A quién le facturo?
+       2. ¿Qué le vendo?
+       3. ¿Cómo paga?
+
+   Y el resumen del dinero se queda fijo a la derecha, porque es lo que se mira
+   mientras se arma la factura, no algo que se descubre al final.
+
+   El botón de emitir permanece bloqueado hasta que la factura esté completa, y
+   dice qué falta en lugar de esperar a que el servidor lo rechace. La validación
+   del servidor sigue siendo la que manda; esto solo evita el viaje.
+#}
+
+{% block title %}Nueva venta | Siste Soluciones{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('create_invoice') }}" id="formFactura" novalidate>
+<input type="hidden" name="vista" value="nueva">
+<input type="hidden" name="tipo_factura" value="FV">
+<input type="hidden" name="cod_cliente" id="codCliente">
+<input type="hidden" name="cod_descuento_factura" id="codDescuentoFactura">
+<input type="hidden" name="valor_descuento_factura" id="valorDescuentoFactura" value="0">
+
+<div class="fact-barra">
+    <div>
+        <h1 class="h5 fw-bold mb-0">Nueva venta</h1>
+        <span class="text-muted small">
+            {% if empresa %}Emite {{ empresa.nombre }} · NIT {{ empresa.nit }}{% if empresa.dv %}-{{ empresa.dv }}{% endif %}
+            {% else %}Sin empresa emisora configurada{% endif %}
+        </span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('new_invoice') }}" class="btn btn-sm btn-link text-muted text-decoration-none"
+           title="El formulario anterior, mientras se compara con este">Ver formulario anterior</a>
+        <a href="{{ url_for('invoice') }}" class="btn btn-light border btn-sm px-3">Cancelar</a>
+        <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold" id="btnEmitirBarra" disabled>
+            <i class="bi bi-check2-circle me-1"></i> Registrar venta
+        </button>
+    </div>
+</div>
+
+<div class="container-fluid py-4">
+
+    {% if error %}
+    <div class="alert alert-danger border-0 shadow-sm d-flex align-items-start gap-2" style="border-radius:12px;">
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        <div><div class="fw-bold mb-1">No se pudo emitir la factura</div>{{ error }}</div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-xl-8">
+
+            {# ── Paso 1 ─────────────────────────────────────────────── #}
+            <section class="fact-paso" id="paso1">
+                <div class="fact-paso-cabeza">
+                    <span class="fact-paso-num">1</span>
+                    <div>
+                        <h2 class="h6 fw-bold mb-0">¿A quién le vendes?</h2>
+                        <span class="text-muted small">Busca por nombre o por documento</span>
+                    </div>
+                    <span class="fact-paso-check" id="check1"><i class="bi bi-check-circle-fill"></i></span>
+                </div>
+
+                <div class="fact-paso-cuerpo">
+                    <div id="clienteBuscador">
+                        <div class="fact-busca">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="inputCliente" autocomplete="off"
+                                   class="form-control form-control-lg border-0"
+                                   placeholder="Nombre o número de documento…">
+                            <a href="{{ url_for('new_customer') }}" target="_blank"
+                               class="btn btn-light border text-nowrap">
+                                <i class="bi bi-person-plus"></i> Nuevo
+                            </a>
+                        </div>
+                        <div class="fact-resultados d-none" id="resultadosCliente"></div>
+                    </div>
+
+                    <div class="fact-elegido d-none" id="clienteElegido">
+                        <div class="fact-avatar"><i class="bi bi-person-fill"></i></div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold" id="clienteNombre"></div>
+                            <div class="text-muted small" id="clienteDoc"></div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light border" id="cambiarCliente">Cambiar</button>
+                    </div>
+                </div>
+            </section>
+
+            {# ── Paso 2 ─────────────────────────────────────────────── #}
+            <section class="fact-paso" id="paso2">
+                <div class="fact-paso-cabeza">
+                    <span class="fact-paso-num">2</span>
+                    <div>
+                        <h2 class="h6 fw-bold mb-0">¿Qué le vendes?</h2>
+                        <span class="text-muted small">Escribe y presiona Enter para agregar</span>
+                    </div>
+                    <span class="fact-paso-check" id="check2"><i class="bi bi-check-circle-fill"></i></span>
+                </div>
+
+                <div class="fact-paso-cuerpo">
+                    <div class="fact-busca">
+                        <i class="bi bi-upc-scan"></i>
+                        <input type="text" id="inputProducto" autocomplete="off"
+                               class="form-control form-control-lg border-0"
+                               placeholder="Nombre o código del producto…">
+                    </div>
+                    <div class="fact-resultados d-none" id="resultadosProducto"></div>
+
+                    <div class="table-responsive mt-3">
+                        <table class="table align-middle mb-0 fact-tabla">
+                            <thead>
+                                <tr>
+                                    <th style="width:40%;">Concepto</th>
+                                    <th class="text-center" style="width:110px;">Cantidad</th>
+                                    <th class="text-end" style="width:130px;">Precio</th>
+                                    <th class="text-center" style="width:130px;">Descuento</th>
+                                    <th class="text-end" style="width:130px;">Total</th>
+                                    <th style="width:44px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="lineas"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="fact-vacio" id="sinLineas">
+                        <i class="bi bi-cart"></i>
+                        <div class="fw-bold">Todavía no has agregado nada</div>
+                        <div class="small text-muted">Busca arriba lo que vas a vender.</div>
+                    </div>
+                </div>
+            </section>
+
+            {# ── Paso 3 ─────────────────────────────────────────────── #}
+            <section class="fact-paso" id="paso3">
+                <div class="fact-paso-cabeza">
+                    <span class="fact-paso-num">3</span>
+                    <div>
+                        <h2 class="h6 fw-bold mb-0">¿Cómo paga?</h2>
+                        <span class="text-muted small">De contado o a crédito, y con qué medio</span>
+                    </div>
+                    <span class="fact-paso-check" id="check3"><i class="bi bi-check-circle-fill"></i></span>
+                </div>
+
+                <div class="fact-paso-cuerpo">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Forma de pago</label>
+                            <div class="fact-opciones">
+                                <label class="fact-opcion activa" id="opContado">
+                                    <input type="radio" name="forma" value="contado" checked hidden>
+                                    <i class="bi bi-cash-coin"></i>
+                                    <span class="fw-bold">De contado</span>
+                                    <small class="text-muted">Paga ahora</small>
+                                </label>
+                                <label class="fact-opcion" id="opCredito">
+                                    <input type="radio" name="forma" value="credito" hidden>
+                                    <i class="bi bi-calendar-check"></i>
+                                    <span class="fw-bold">A crédito</span>
+                                    <small class="text-muted">Paga después</small>
+                                </label>
+                            </div>
+
+                            <div class="mt-3 d-none" id="bloquePlazo">
+                                <label class="form-label small fw-bold text-uppercase text-muted">Plazo</label>
+                                <select name="plazo_pago" id="plazoPago" class="form-select">
+                                    <option value="15">15 días</option>
+                                    <option value="30" selected>30 días</option>
+                                    <option value="60">60 días</option>
+                                </select>
+                                <div class="form-text" id="textoVencimiento"></div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Medio de pago</label>
+                            <div class="fact-medios" id="mediosPago">
+                                {% for pm in metodos_pago %}
+                                <label class="fact-medio {{ 'activa' if loop.first }}">
+                                    <input type="radio" name="cod_metodo_pago" value="{{ pm.cod_pago }}"
+                                           {{ 'checked' if loop.first }} hidden>
+                                    {{ pm.descripcion }}
+                                </label>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="form-label small fw-bold text-uppercase text-muted mb-1">
+                                    Estado de la factura
+                                </label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3"
+                                          id="estadoTexto">Pagada</span>
+                                    <button type="button" class="btn btn-sm btn-link text-muted p-0"
+                                            id="cambiarEstado">cambiar</button>
+                                </div>
+                                <select name="cod_pago" id="estadoPago" class="form-select mt-2 d-none">
+                                    {% for s in pagos_factura %}
+                                    <option value="{{ s.cod_pago_factura }}">{{ s.status }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    Se ajusta solo según la forma de pago. Cámbialo únicamente si el caso lo pide.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label small fw-bold text-uppercase text-muted">
+                                Observaciones <span class="fw-normal text-lowercase">(salen impresas)</span>
+                            </label>
+                            <input type="text" name="observaciones" maxlength="200" class="form-control"
+                                   placeholder="Opcional: referencia o nota para el cliente…">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold text-uppercase text-muted">
+                                Descuento a toda la factura
+                            </label>
+                            <select id="descuentoFactura" class="form-select">
+                                <option value="">Sin descuento</option>
+                                {% for d in invoice_discounts %}
+                                <option value="{{ d.cod_descuento }}" data-porcentaje="{{ d.porcentaje }}">
+                                    {{ d.descripcion }} — {{ d.porcentaje }} %
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Se reparte entre las líneas y el IVA se recalcula.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        {# ── Resumen ────────────────────────────────────────────────── #}
+        <div class="col-xl-4">
+            <div class="fact-resumen">
+                <div class="fact-resumen-cabeza">
+                    <h2 class="h6 fw-bold mb-0">Resumen</h2>
+                    <span class="text-muted small" id="conteoLineas">0 productos</span>
+                </div>
+
+                <div class="fact-resumen-cuerpo">
+                    <div class="fact-fila"><span>Subtotal</span><span id="rSubtotal">$0</span></div>
+                    <div class="fact-fila" id="filaDescuentos"><span>Descuentos</span><span id="rDescuentos">−$0</span></div>
+                    <div class="fact-fila"><span>Base gravable</span><span id="rBase">$0</span></div>
+                    <div class="fact-fila"><span>IVA</span><span id="rIva">$0</span></div>
+                    <div class="fact-total"><span>Total</span><span id="rTotal">$0</span></div>
+
+                    <div class="fact-pendientes" id="pendientes"></div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold mt-3" id="btnEmitir" disabled>
+                        <i class="bi bi-check2-circle me-1"></i> Registrar venta
+                    </button>
+                    <p class="text-muted small text-center mb-0 mt-2">
+                        La venta se registra y se cobra ya. La factura electrónica se le pide
+                        a FactuGest después, desde «Pendientes de emitir»: si el servicio está
+                        caído, la caja sigue funcionando.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    "use strict";
+
+    const pesos = n => "$" + Math.round(n).toLocaleString("es-CO");
+    const $ = id => document.getElementById(id);
+
+    // ── Buscador reutilizable ────────────────────────────────────────────
+    // Cliente y producto se buscan igual: escribir, esperar, elegir con el mouse
+    // o con las flechas. Tenerlo una sola vez evita que los dos se comporten
+    // distinto sin que nadie lo haya decidido.
+    function buscador({ input, caja, url, pintar, elegir }) {
+        let temporizador, marcado = -1, datos = [];
+
+        const cerrar = () => { caja.classList.add("d-none"); marcado = -1; };
+        const marcar = i => {
+            const filas = caja.querySelectorAll(".fact-resultado");
+            filas.forEach(f => f.classList.remove("marcada"));
+            if (i >= 0 && filas[i]) {
+                filas[i].classList.add("marcada");
+                filas[i].scrollIntoView({ block: "nearest" });
+            }
+            marcado = i;
+        };
+
+        const buscar = async texto => {
+            const r = await fetch(url + encodeURIComponent(texto));
+            datos = await r.json();
+            if (!datos.length) {
+                caja.innerHTML = '<div class="fact-resultado text-muted">Sin resultados para «' +
+                    texto.replace(/</g, "&lt;") + '»</div>';
+            } else {
+                caja.innerHTML = datos.map((d, i) =>
+                    '<div class="fact-resultado" data-i="' + i + '">' + pintar(d) + "</div>").join("");
+            }
+            caja.classList.remove("d-none");
+            marcar(-1);
+        };
+
+        input.addEventListener("input", () => {
+            clearTimeout(temporizador);
+            const texto = input.value.trim();
+            if (texto.length < 2) { cerrar(); return; }
+            temporizador = setTimeout(() => buscar(texto), 220);
+        });
+
+        input.addEventListener("keydown", e => {
+            const filas = caja.querySelectorAll(".fact-resultado");
+            if (e.key === "ArrowDown") { e.preventDefault(); marcar(Math.min(marcado + 1, filas.length - 1)); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); marcar(Math.max(marcado - 1, 0)); }
+            else if (e.key === "Enter") {
+                e.preventDefault();
+                const i = marcado >= 0 ? marcado : 0;
+                if (datos[i]) { elegir(datos[i]); cerrar(); }
+            } else if (e.key === "Escape") { cerrar(); }
+        });
+
+        caja.addEventListener("click", e => {
+            const fila = e.target.closest(".fact-resultado");
+            if (!fila || fila.dataset.i === undefined) return;
+            elegir(datos[fila.dataset.i]);
+            cerrar();
+        });
+
+        document.addEventListener("click", e => {
+            if (!caja.contains(e.target) && e.target !== input) cerrar();
+        });
+
+        return { cerrar };
+    }
+
+    // ── Paso 1 · Cliente ─────────────────────────────────────────────────
+    buscador({
+        input: $("inputCliente"),
+        caja: $("resultadosCliente"),
+        url: "/invoice/api/customers/search?q=",
+        pintar: c => '<div class="fw-bold">' + c.full_name + "</div>" +
+                     '<div class="text-muted small">' + (c.document_type_label || "") +
+                     " " + c.document_number + "</div>",
+        elegir: c => {
+            $("codCliente").value = c.customer_id;
+            $("clienteNombre").textContent = c.full_name;
+            $("clienteDoc").textContent = (c.document_type_label || "") + " " + c.document_number;
+            $("clienteBuscador").classList.add("d-none");
+            $("clienteElegido").classList.remove("d-none");
+            $("inputProducto").focus();
+            recalcular();
+        },
+    });
+
+    $("cambiarCliente").addEventListener("click", () => {
+        $("codCliente").value = "";
+        $("clienteElegido").classList.add("d-none");
+        $("clienteBuscador").classList.remove("d-none");
+        $("inputCliente").value = "";
+        $("inputCliente").focus();
+        recalcular();
+    });
+
+    // ── Paso 2 · Líneas ──────────────────────────────────────────────────
+    const cuerpo = $("lineas");
+
+    function agregar(p) {
+        // Un producto que ya está en la factura suma cantidad en lugar de abrir
+        // una segunda línea idéntica: dos filas del mismo artículo son un error
+        // de digitación, no una intención.
+        const existente = cuerpo.querySelector('tr[data-producto="' + p.cod_producto + '"]');
+        if (existente) {
+            const campo = existente.querySelector(".ln-cantidad");
+            campo.value = parseInt(campo.value || 0, 10) + 1;
+            campo.dispatchEvent(new Event("input"));
+            destacar(existente);
+            return;
+        }
+
+        const fila = document.createElement("tr");
+        fila.dataset.producto = p.cod_producto;
+        fila.dataset.stock = p.controla_stock ? p.stock : "";
+        fila.innerHTML = `
+            <td>
+                <input type="hidden" name="cod_producto" value="${p.cod_producto}">
+                <div class="fw-bold">${p.nombre}</div>
+                <div class="text-muted small font-monospace">${p.sku || ""}</div>
+            </td>
+            <td class="text-center">
+                <input type="number" name="cantidad" class="form-control form-control-sm text-center ln-cantidad"
+                       value="1" min="1" step="1">
+            </td>
+            <td class="text-end ln-precio-texto" data-precio="${p.precio_unitario}"
+                data-iva="${p.tax_porcentaje}">${pesos(p.precio_unitario)}</td>
+            <td class="text-center">
+                <select name="descuento_porcentaje" class="form-select form-select-sm ln-descuento">
+                    <option value="0">—</option>
+                </select>
+                <input type="hidden" name="descuento_descripcion" class="ln-desc-texto" value="">
+            </td>
+            <td class="text-end fw-bold ln-total">${pesos(p.precio_unitario * 1.19)}</td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-link text-danger p-0 ln-quitar" title="Quitar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </td>`;
+        cuerpo.appendChild(fila);
+        cargarDescuentos(fila, p.cod_producto);
+        destacar(fila);
+        recalcular();
+    }
+
+    function destacar(fila) {
+        fila.classList.remove("recien");
+        void fila.offsetWidth;
+        fila.classList.add("recien");
+    }
+
+    async function cargarDescuentos(fila, codProducto) {
+        const r = await fetch("/invoice/api/products/" + codProducto + "/discounts");
+        const lista = await r.json();
+        if (!lista.length) return;
+        const select = fila.querySelector(".ln-descuento");
+        lista.forEach(d => {
+            const o = document.createElement("option");
+            o.value = d.porcentaje;
+            o.textContent = d.porcentaje + " % · " + d.descripcion;
+            o.dataset.descripcion = d.descripcion;
+            select.appendChild(o);
+        });
+    }
+
+    buscador({
+        input: $("inputProducto"),
+        caja: $("resultadosProducto"),
+        url: "/invoice/api/products/search?q=",
+        pintar: p => '<div class="d-flex justify-content-between gap-3">' +
+                     '<div><div class="fw-bold">' + p.nombre + "</div>" +
+                     '<div class="text-muted small font-monospace">' + (p.sku || "") + "</div></div>" +
+                     '<div class="text-end"><div class="fw-bold">' + pesos(p.precio_unitario) + "</div>" +
+                     (p.controla_stock
+                        ? '<div class="small ' + (p.stock > 0 ? "text-muted" : "text-danger fw-bold") +
+                          '">' + (p.stock > 0 ? p.stock + " disponibles" : "sin existencias") + "</div>"
+                        : '<div class="small text-muted">servicio</div>') +
+                     "</div></div>",
+        elegir: p => { agregar(p); $("inputProducto").value = ""; $("inputProducto").focus(); },
+    });
+
+    cuerpo.addEventListener("input", e => {
+        if (e.target.matches(".ln-cantidad, .ln-descuento")) recalcular();
+    });
+    cuerpo.addEventListener("change", e => {
+        if (e.target.matches(".ln-descuento")) {
+            const opcion = e.target.selectedOptions[0];
+            e.target.closest("tr").querySelector(".ln-desc-texto").value =
+                opcion.dataset.descripcion || "";
+        }
+    });
+    cuerpo.addEventListener("click", e => {
+        if (e.target.closest(".ln-quitar")) {
+            e.target.closest("tr").remove();
+            recalcular();
+        }
+    });
+
+    // ── Paso 3 · Pago ────────────────────────────────────────────────────
+    const PAGADA = "1", PENDIENTE = "2";
+
+    function pintarEstado() {
+        const credito = $("opCredito").classList.contains("activa");
+        const select = $("estadoPago");
+        if (!$("cambiarEstado").dataset.abierto) {
+            select.value = credito ? PENDIENTE : PAGADA;
+        }
+        const elegido = select.selectedOptions[0];
+        $("estadoTexto").textContent = elegido ? elegido.textContent : "";
+        $("estadoTexto").className = "badge rounded-pill px-3 border " +
+            (select.value === PAGADA
+                ? "bg-success-subtle text-success border-success-subtle"
+                : "bg-warning-subtle text-warning-emphasis border-warning-subtle");
+
+        if (credito) {
+            const dias = parseInt($("plazoPago").value, 10);
+            const vence = new Date();
+            vence.setDate(vence.getDate() + dias);
+            $("textoVencimiento").textContent = "Vence el " +
+                vence.toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" });
+        }
+    }
+
+    document.querySelectorAll(".fact-opcion").forEach(op => {
+        op.addEventListener("click", () => {
+            document.querySelectorAll(".fact-opcion").forEach(o => o.classList.remove("activa"));
+            op.classList.add("activa");
+            const credito = op.id === "opCredito";
+            $("bloquePlazo").classList.toggle("d-none", !credito);
+            // Sin plazo no hay crédito: el servidor rechaza un crédito con plazo 0.
+            $("plazoPago").disabled = !credito;
+            if (!credito) $("plazoPago").value = "0";
+            else if ($("plazoPago").value === "0") $("plazoPago").value = "30";
+            pintarEstado();
+            recalcular();
+        });
+    });
+
+    $("plazoPago").addEventListener("change", pintarEstado);
+
+    // El plazo viaja siempre, aunque el bloque esté oculto: de contado son 0 días.
+    $("formFactura").addEventListener("submit", () => {
+        if (!$("opCredito").classList.contains("activa")) {
+            $("plazoPago").disabled = false;
+            $("plazoPago").innerHTML = '<option value="0" selected>0</option>';
+        }
+    });
+
+    document.querySelectorAll(".fact-medio").forEach(m => {
+        m.addEventListener("click", () => {
+            document.querySelectorAll(".fact-medio").forEach(o => o.classList.remove("activa"));
+            m.classList.add("activa");
+        });
+    });
+
+    $("cambiarEstado").addEventListener("click", () => {
+        $("cambiarEstado").dataset.abierto = "si";
+        $("estadoPago").classList.remove("d-none");
+        $("cambiarEstado").classList.add("d-none");
+    });
+    $("estadoPago").addEventListener("change", pintarEstado);
+
+    $("descuentoFactura").addEventListener("change", recalcular);
+
+    // ── Totales ──────────────────────────────────────────────────────────
+    // Es una vista previa, no la fuente de la verdad: los totales que se guardan
+    // los calcula el servidor con `calculo_documento`. Si los dos no coinciden,
+    // el que está mal es este.
+    function recalcular() {
+        let bruto = 0, descuentoLineas = 0, base = 0, iva = 0;
+        const sinStock = [];
+
+        cuerpo.querySelectorAll("tr").forEach(fila => {
+            const precio = parseFloat(fila.querySelector(".ln-precio-texto").dataset.precio) || 0;
+            const tasa = parseFloat(fila.querySelector(".ln-precio-texto").dataset.iva) || 0;
+            const cantidad = parseFloat(fila.querySelector(".ln-cantidad").value) || 0;
+            const pct = parseFloat(fila.querySelector(".ln-descuento").value) || 0;
+
+            const valor = precio * cantidad;
+            const descuento = Math.round(valor * pct / 100);
+            const baseLinea = valor - descuento;
+            const ivaLinea = Math.round(baseLinea * tasa / 100);
+
+            bruto += valor;
+            descuentoLineas += descuento;
+            base += baseLinea;
+            iva += ivaLinea;
+
+            fila.querySelector(".ln-total").textContent = pesos(baseLinea + ivaLinea);
+
+            // Aviso de existencias: el servidor lo vuelve a comprobar antes de
+            // emitir, pero enterarse al escribir la cantidad evita el viaje.
+            const stock = fila.dataset.stock;
+            const excede = stock !== "" && cantidad > parseFloat(stock);
+            fila.querySelector(".ln-cantidad").classList.toggle("is-invalid", excede);
+            if (excede) sinStock.push(fila.querySelector("div.fw-bold").textContent);
+        });
+
+        // Descuento de factura: reduce la base y el IVA se recorta en la misma
+        // proporción. Es la regla del servidor, replicada para que el número que
+        // se ve mientras se arma la factura sea el que se va a cobrar.
+        const opcion = $("descuentoFactura").selectedOptions[0];
+        const pctFactura = parseFloat(opcion?.dataset.porcentaje) || 0;
+        const descuentoFactura = Math.round(base * pctFactura / 100);
+        if (descuentoFactura > 0 && base > 0) {
+            iva = Math.round(iva - Math.round(iva * (descuentoFactura / base)));
+            base -= descuentoFactura;
+        }
+        $("codDescuentoFactura").value = opcion?.value || "";
+        $("valorDescuentoFactura").value = descuentoFactura;
+
+        const descuentos = descuentoLineas + descuentoFactura;
+        $("rSubtotal").textContent = pesos(bruto);
+        $("rDescuentos").textContent = "−" + pesos(descuentos);
+        $("filaDescuentos").classList.toggle("text-muted", descuentos === 0);
+        $("rBase").textContent = pesos(base);
+        $("rIva").textContent = pesos(iva);
+        $("rTotal").textContent = pesos(base + iva);
+
+        const n = cuerpo.querySelectorAll("tr").length;
+        $("conteoLineas").textContent = n === 1 ? "1 producto" : n + " productos";
+        $("sinLineas").classList.toggle("d-none", n > 0);
+
+        revisar(n, sinStock);
+    }
+
+    // ── Qué falta ────────────────────────────────────────────────────────
+    // El botón dice por qué no se puede emitir todavía, en lugar de estar
+    // apagado sin explicación o de dejar que el servidor lo rechace.
+    function revisar(n, sinStock) {
+        const falta = [];
+        if (!$("codCliente").value) falta.push("elegir el cliente");
+        if (!n) falta.push("agregar al menos un producto");
+        if (sinStock && sinStock.length) {
+            falta.push("ajustar la cantidad de " + sinStock.join(", ") +
+                       ": no hay tantas existencias");
+        }
+
+        $("check1").classList.toggle("visible", !!$("codCliente").value);
+        $("check2").classList.toggle("visible", n > 0);
+        $("check3").classList.add("visible");
+
+        const listo = falta.length === 0;
+        $("btnEmitir").disabled = !listo;
+        $("btnEmitirBarra").disabled = !listo;
+        $("pendientes").innerHTML = listo
+            ? '<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Todo listo para registrar</span>'
+            : '<i class="bi bi-info-circle me-1"></i>Falta ' + falta.join(" y ") + ".";
+        $("pendientes").className = "fact-pendientes " + (listo ? "lista" : "");
+    }
+
+    $("plazoPago").disabled = true;
+    pintarEstado();
+    recalcular();
+    $("inputCliente").focus();
+})();
+</script>
+{% endblock %}
