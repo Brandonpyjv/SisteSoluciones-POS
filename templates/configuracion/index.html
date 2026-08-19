@@ -1,0 +1,170 @@
+{% extends "layout.html" %}
+
+{% block title %}Configuración | Siste Soluciones{% endblock %}
+
+{% macro tarjeta(titulo, descripcion, icono, enlaces) %}
+<div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:44px;height:44px;background:var(--bs-primary-bg-subtle, #f7e6e6);">
+                    <i class="bi {{ icono }} text-primary fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1">{{ titulo }}</h6>
+                    <p class="text-muted small mb-0">{{ descripcion }}</p>
+                </div>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for enlace in enlaces %}
+                <a href="{{ enlace.url }}" class="list-group-item list-group-item-action px-0 py-2 border-0 border-bottom d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi {{ enlace.icono }} me-2 text-muted"></i>{{ enlace.texto }}
+                        {% if enlace.nota %}<span class="text-muted small d-block ms-4">{{ enlace.nota }}</span>{% endif %}
+                    </span>
+                    <span class="text-muted small">
+                        {% if enlace.valor is not none %}{{ enlace.valor }}{% endif %}
+                        <i class="bi bi-chevron-right ms-2"></i>
+                    </span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1 text-gray-800 fw-bold">
+            <i class="bi bi-sliders text-primary me-2"></i>Configuración
+        </h1>
+        <p class="text-muted mb-0 small">
+            Los catálogos y parámetros del negocio, agrupados por para qué sirven.
+        </p>
+    </div>
+
+    {% if prueba %}
+    <div class="alert {{ 'alert-success' if prueba.ok else 'alert-danger' }} border-0 shadow-sm"
+         style="border-radius:12px;">
+        <i class="bi {{ 'bi-check-circle-fill' if prueba.ok else 'bi-exclamation-triangle-fill' }} me-2"></i>
+        {{ prueba.texto }}
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+
+        {{ tarjeta(
+            'Reglas de venta',
+            'Lo que el formulario de venta ofrece para escoger: tarifas, rebajas y cómo se cobra.',
+            'bi-receipt-cutoff',
+            [
+                {'url': url_for('invoice_taxes'), 'icono': 'bi-percent', 'texto': 'Impuestos',
+                 'nota': 'Tarifas de IVA que llevan los productos', 'valor': conteos.impuestos},
+                {'url': url_for('discount'), 'icono': 'bi-tag', 'texto': 'Descuentos',
+                 'nota': 'Por producto y de factura', 'valor': conteos.descuentos},
+                {'url': url_for('payment_methods'), 'icono': 'bi-wallet2', 'texto': 'Métodos de pago',
+                 'nota': 'Efectivo, tarjeta, transferencia', 'valor': conteos.metodos_pago},
+                {'url': url_for('invoice_payments'), 'icono': 'bi-credit-card', 'texto': 'Estados de pago',
+                 'nota': 'Pagada, pendiente, vencida', 'valor': conteos.estados_pago}
+            ]
+        ) }}
+
+        {{ tarjeta(
+            'El negocio',
+            'Los datos de la empresa y quién entra al sistema.',
+            'bi-building-gear',
+            [
+                {'url': url_for('branches'), 'icono': 'bi-building', 'texto': 'Datos de la empresa',
+                 'nota': 'NIT, dirección y contacto que salen en la factura', 'valor': conteos.empresas},
+                {'url': url_for('users'), 'icono': 'bi-person-gear', 'texto': 'Usuarios',
+                 'nota': 'Cuentas y roles', 'valor': conteos.usuarios},
+                {'url': url_for('logs'), 'icono': 'bi-journal-text', 'texto': 'Auditoría',
+                 'nota': 'Registro de lo que pasó en el sistema', 'valor': none}
+            ]
+        ) }}
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                             style="width:44px;height:44px;background:var(--bs-primary-bg-subtle, #f7e6e6);">
+                            <i class="bi bi-plug text-primary fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Facturación electrónica</h6>
+                            <p class="text-muted small mb-0">
+                                Este sistema no genera CUFE ni XML: se los pide a FactuGest, que es
+                                el proveedor tecnológico. Aquí se ve si esa conexión está en pie.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span><i class="bi bi-hdd-network me-2 text-muted"></i>Dirección</span>
+                        <span class="font-monospace small">{{ factugest.url }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span><i class="bi bi-key me-2 text-muted"></i>Llave del negocio</span>
+                        {% if factugest.configurado %}
+                        <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3">Configurada</span>
+                        {% else %}
+                        <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3">Falta</span>
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('facturas_pendientes') }}"
+                       class="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none text-body">
+                        <span><i class="bi bi-hourglass-split me-2 text-muted"></i>Ventas sin emitir</span>
+                        <span class="{{ 'text-danger fw-bold' if conteos.pendientes else 'text-muted' }} small">
+                            {{ conteos.pendientes }} <i class="bi bi-chevron-right ms-1"></i>
+                        </span>
+                    </a>
+
+                    <form method="POST" action="{{ url_for('probar_conexion') }}" class="mt-3">
+                        <button class="btn btn-outline-primary btn-sm w-100" {{ 'disabled' if not factugest.configurado }}>
+                            <i class="bi bi-broadcast me-1"></i> Probar la conexión
+                        </button>
+                    </form>
+                    <p class="text-muted small mt-2 mb-0">
+                        La llave viaja en el archivo <span class="font-monospace">.env</span> y nunca
+                        sale del servidor: si el navegador pudiera usarla, cualquiera con la consola
+                        abierta podría emitir facturas a nombre del negocio.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                             style="width:44px;height:44px;background:var(--bs-primary-bg-subtle, #f7e6e6);">
+                            <i class="bi bi-person-circle text-primary fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Mi cuenta</h6>
+                            <p class="text-muted small mb-0">Lo que solo cambia cada quien para sí mismo.</p>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('user_photo_form', user_id=request.session.get('user', {}).get('cod_usuario')) }}"
+                       class="list-group-item list-group-item-action px-0 py-2 border-0 border-bottom d-flex justify-content-between align-items-center text-decoration-none">
+                        <span><i class="bi bi-camera me-2 text-muted"></i>Cambiar mi foto de perfil</span>
+                        <i class="bi bi-chevron-right text-muted"></i>
+                    </a>
+                    <a href="{{ url_for('logout') }}"
+                       class="list-group-item list-group-item-action px-0 py-2 border-0 d-flex justify-content-between align-items-center text-decoration-none text-danger">
+                        <span><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

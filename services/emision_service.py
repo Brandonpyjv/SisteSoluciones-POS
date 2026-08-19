@@ -128,6 +128,21 @@ def emitir(venta: dict) -> dict:
     return documento
 
 
+def contar_pendientes() -> int:
+    """Cuántas ventas están esperando su factura electrónica.
+
+    El menú lo muestra en todas las pantallas: es lo único que no puede quedarse
+    esperando a que alguien se acuerde de entrar a mirar, porque son ventas ya
+    cobradas cuya factura el comprador todavía no tiene.
+    """
+    fila = get_one(
+        "SELECT COUNT(*) AS n FROM facturas "
+        "WHERE tipo_factura = 'FV' "
+        "  AND (factugest_id IS NULL OR factugest_estado IN ('ERROR', 'RECHAZADO')) "
+        "  AND COALESCE(factugest_estado, '') <> 'HISTORICO'")
+    return int(fila["n"] if fila else 0)
+
+
 def pendientes_de_emitir():
     """Ventas que todavía no tienen documento electrónico, o que fallaron."""
     return get_many(

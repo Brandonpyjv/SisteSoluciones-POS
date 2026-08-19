@@ -73,51 +73,141 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* ── Estructura ──────────────────────────────────────────────────────────────
+ *
+ * La barra superior es fija y mide 60 px; el menú lateral empieza donde ella
+ * termina y el contenido se corre lo que mide el menú. Estas tres medidas
+ * estaban repetidas en un <style> dentro de layout.html, que es donde nadie las
+ * busca cuando algo se desalinea.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+    --barra-alto: 60px;
+    --menu-ancho: 240px;
+    --marca: #7a0000;
+    --marca-clara: #a81818;
+    --marca-oscura: #520000;
+}
+
+body {
+    padding-top: var(--barra-alto);
+}
+
+.barra-marca {
+    background: linear-gradient(135deg, var(--marca), var(--marca-clara));
+}
+
 .sidebar {
-    width: 240px;
-    height: 100vh;
-    background: linear-gradient(135deg, #7a0000, #a81818);
+    width: var(--menu-ancho);
     position: fixed;
-    top: 0;
+    top: var(--barra-alto);
     left: 0;
-    padding-top: 30px;
-    color: white;
-    box-shadow: 8px 0 25px rgba(0, 0, 0, 0.1);
-    border-right: 4px solid transparent;
-    z-index: 1000;
-}
-
-.sidebar h3 {
-    text-align: center;
-    margin-bottom: 30px;
-    font-weight: 700;
-    letter-spacing: 1px;
+    height: calc(100vh - var(--barra-alto));
+    background: linear-gradient(160deg, var(--marca), var(--marca-clara));
     color: #fff;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
 }
 
-.sidebar a {
+.sidebar-grupo {
+    padding: 10px 0 6px;
+}
+
+.sidebar-grupo + .sidebar-grupo {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* El rótulo del grupo no es un enlace: nombra el trabajo que hay debajo. Antes
+ * eran desplegables, y plegar un menú de tres elementos solo agrega un clic. */
+.sidebar-titulo {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+    padding: 4px 20px 8px;
+    font-weight: 700;
+}
+
+.sidebar-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 15px 25px;
-    color: rgba(255, 255, 255, 0.8);
+    gap: 11px;
+    padding: 9px 20px;
+    color: rgba(255, 255, 255, 0.85);
     text-decoration: none;
-    font-size: 16px;
-    transition: all 0.2s ease-in-out;
-    border-left: 4px solid transparent;
+    font-size: 0.92rem;
+    border-left: 3px solid transparent;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.sidebar a:hover {
+.sidebar-item i {
+    font-size: 1rem;
+    width: 18px;
+    text-align: center;
+    opacity: 0.85;
+}
+
+.sidebar-item:hover {
     color: #fff;
-    background: rgba(255, 255, 255, 0.1);
-    border-left: 4px solid #fff;
+    background: rgba(255, 255, 255, 0.10);
+}
+
+/* Dónde estoy. El menú anterior no lo decía en ninguna parte: había que leer la
+ * URL o el título para saber en qué módulo se estaba. */
+.sidebar-item.activo {
+    color: #fff;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.18);
+    border-left-color: #fff;
+}
+
+.sidebar-item.activo i {
+    opacity: 1;
+}
+
+/* Cuántas ventas están esperando emisión. Es el único número del menú porque es
+ * el único que obliga a hacer algo hoy: son facturas que el cliente no tiene. */
+.sidebar-insignia {
+    margin-left: auto;
+    background: #fff;
+    color: var(--marca-oscura);
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 7px;
+}
+
+.sidebar-pie {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 0;
 }
 
 .content {
-    margin-left: 240px;
-    padding: 40px;
+    margin-left: var(--menu-ancho);
+    padding: 20px 28px 40px;
     width: auto;
-    min-height: 100vh;
+    min-height: calc(100vh - var(--barra-alto));
+}
+
+/* Encabezado de tabla con la marca. Estaba escrito a mano, con el degradado
+ * repetido en cada plantilla; así una tabla nueva sale del mismo color que las
+ * demás sin copiar hexadecimales. */
+.tabla-encabezado {
+    background: linear-gradient(135deg, var(--marca), var(--marca-clara));
+    color: #fff;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.tabla-encabezado th {
+    background: transparent;
+    color: #fff;
+    border-bottom: 0;
+    vertical-align: middle;
 }
 
 .welcome-box {
@@ -353,13 +443,6 @@ body {
         1px 1px 0 white;
 }
 
-/* Esto modifica el sidebar para que sean desplegables y barra desplazadora*/
-/* Sidebar scrollable */
-.sidebar {
-    display: flex;
-    flex-direction: column;
-}
-
 .custom-scrollbar {
     scrollbar-width: thin; /* Para Firefox */
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
@@ -373,26 +456,6 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
-}
-
-/* Estilo para los encabezados del desplegable */
-.sidebar-header {
-    padding: 12px 20px;
-    font-size: 0.75rem;
-    letter-spacing: 1px;
-    color: white;
-    text-decoration: none;
-    transition: background 0.2s;
-}
-
-.sidebar-header:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-/* Rotación del icono cuando el menú está abierto */
-.sidebar-header[aria-expanded="true"] .bi-chevron-down {
-    transform: rotate(180deg);
-    transition: transform 0.3s;
 }
 
 

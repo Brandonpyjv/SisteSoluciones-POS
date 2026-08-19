@@ -55,11 +55,13 @@ def puede_cambiar_foto(actor: dict, objetivo: dict) -> bool:
         return True
     return can_manage(actor.get("rol", ""), objetivo.get("rol", ""))
 
-# Rutas exclusivas de roles admin (bloqueadas para CAJERO)
+# Rutas exclusivas de roles admin (bloqueadas para CAJERO).
+# La pantalla de pendientes de emitir no esta aqui a proposito: el cajero es quien
+# ve que una venta se quedo sin factura y quien la reintenta.
 _ADMIN_ONLY_PREFIXES = (
     "/users", "/logs", "/branches",
     "/payment_methods", "/invoice_taxes", "/invoice_payments",
-    "/inventory", "/reports",
+    "/inventory", "/reports", "/configuracion",
 )
 
 # Acciones de escritura bloqueadas para CAJERO.
