@@ -466,8 +466,8 @@ REGIMENES_TRIBUTARIOS = (
 
 TIPOS_DOCUMENTO_FISCAL = ("FV", "NC", "ND")
 
-# Códigos de impuesto de la DIAN, los mismos que documenta el proyecto y que usa
-# `cufe_service` al armar la cadena del CUFE.
+# Códigos de impuesto de la DIAN. Se conservan porque son los que se mandan a
+# FactuGest en cada línea de la factura.
 CODIGOS_IMPUESTO_DIAN = {
     "01": "IVA",
     "02": "Impuesto al consumo",

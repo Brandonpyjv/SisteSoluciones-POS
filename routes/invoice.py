@@ -12,9 +12,6 @@ from services.calculo_documento import calcular_documento
 from services.branches import get_all_branches, get_branch_by_id
 from services.payment_methods_service import get_all_payment_methods
 from services.invoice_payments_service import get_all_invoice_payments
-from services.pdf_service import generate_invoice_pdf
-from services.xml_service import generate_invoice_xml
-from services.cufe_service import generate_cufe
 from services.user_service import get_user_by_id
 from services.inventory_service import (verificar_disponibilidad,
                                          registrar_movimientos_documento,
@@ -22,7 +19,6 @@ from services.inventory_service import (verificar_disponibilidad,
                                          documento_afecto_inventario,
                                          StockInsuficienteError)
 from services.numeracion_service import reservar_numero, RangoResolucionAgotadoError
-from services.documento_canonico import emisor_desde_factura
 from services.validaciones import abreviatura_documento
 from services.factugest_client import FactugestError, configurado, descargar_pdf, descargar_xml
 from services.emision_service import emitir as emitir_en_factugest
@@ -182,15 +178,6 @@ async def create_invoice_post(
             numeracion = reservar_numero(cod_empresa, tipo_factura, cursor=cur)
             numero_factura = numeracion["numero"]
 
-            cufe = generate_cufe({
-                'numero_factura': numero_factura,
-                'fecha': fecha,
-                'subtotal': subtotal_neto,
-                'total_impuestos': total_impuestos,
-                'total': total,
-                'document_number': cliente.get('document_number', ''),
-            }, empresa)
-
             invoice_id = create_invoice(
                 cod_cliente=cod_cliente, cod_usuario=cod_usuario, cod_empresa=cod_empresa,
                 cod_metodo_pago=cod_metodo_pago, cod_pago=cod_pago, fecha=fecha,
@@ -200,7 +187,6 @@ async def create_invoice_post(
                 tipo_factura=tipo_factura,
                 observaciones=observaciones,
                 fecha_vencimiento=fecha_vencimiento or None,
-                cufe=cufe,
                 numero_factura=numero_factura,
                 forma_pago=forma_pago,
                 cod_descuento_factura=cod_descuento_factura,
@@ -269,35 +255,6 @@ def update_status_post(invoice_id: int, cod_pago: int = Form(...)):
     row = get_one("SELECT numero_factura FROM facturas WHERE cod_factura = %s", (invoice_id,))
     num = row['numero_factura'] if row and row.get('numero_factura') else invoice_id
     return RedirectResponse(url=f"/invoice/{num}", status_code=303)
-
-
-@router.get("/{invoice_id}/pdf", name="invoice_pdf")
-def invoice_pdf(invoice_id: int):
-    inv = get_invoice_by_id(invoice_id)
-    if not inv:
-        return RedirectResponse(url="/invoice", status_code=302)
-    details = get_invoice_details(invoice_id)
-    pdf_bytes = generate_invoice_pdf(inv, details)
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="factura_{invoice_id}.pdf"'},
-    )
-
-
-@router.get("/{invoice_id}/xml", name="invoice_xml")
-def invoice_xml_download(invoice_id: int):
-    inv = get_invoice_by_id(invoice_id)
-    if not inv:
-        return RedirectResponse(url="/invoice", status_code=302)
-    details  = get_invoice_details(invoice_id)
-    xml_str  = generate_invoice_xml(inv, details, emisor_desde_factura(inv))
-    filename = f"{inv.get('numero_factura', invoice_id)}.xml"
-    return Response(
-        content=xml_str.encode('utf-8'),
-        media_type="application/xml",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
 
 
 @router.get("/delete/{invoice_id}", name="delete_invoice")
@@ -402,15 +359,6 @@ async def create_nota_credito_post(
         # Marcar original como Parcialmente Anulada (cod 9)
         update_invoice_status(invoice_id, 9)
 
-    cufe_data = {
-        'numero_factura': numero_nc, 'fecha': fecha,
-        'subtotal': abs(subtotal_nc),
-        'total_impuestos': abs(total_imp_nc),
-        'total': abs(total_nc),
-        'document_number': inv.get('document_number', ''),
-    }
-    cufe_nc = generate_cufe(cufe_data, empresa)
-
     nc_id = create_invoice(
         cod_cliente=inv['cod_cliente'], cod_usuario=cod_usuario,
         cod_empresa=cod_empresa, cod_metodo_pago=inv['cod_metodo_pago'],
@@ -418,7 +366,7 @@ async def create_nota_credito_post(
         total=total_nc, subtotal=subtotal_nc,
         total_descuentos=total_desc_nc, total_impuestos=total_imp_nc,
         tipo_factura='NC', observaciones=motivo,
-        numero_factura=numero_nc, cufe=cufe_nc,
+        numero_factura=numero_nc,
         forma_pago=inv.get('forma_pago', 'CONTADO'),
         descripcion_descuento_factura=inv.get('descripcion_descuento_factura'),
     )
@@ -522,13 +470,6 @@ async def create_nota_debito_post(
 
     total_nd = round(subtotal_nd + imp_nd, 2)
 
-    cufe_data = {
-        'numero_factura': numero_nd, 'fecha': fecha,
-        'subtotal': subtotal_nd, 'total_impuestos': imp_nd, 'total': total_nd,
-        'document_number': inv.get('document_number', ''),
-    }
-    cufe_nd = generate_cufe(cufe_data, empresa)
-
     nd_id = create_invoice(
         cod_cliente=inv['cod_cliente'], cod_usuario=cod_usuario,
         cod_empresa=cod_empresa, cod_metodo_pago=inv['cod_metodo_pago'],
@@ -536,7 +477,7 @@ async def create_nota_debito_post(
         total=total_nd, subtotal=subtotal_nd,
         total_descuentos=0, total_impuestos=imp_nd,
         tipo_factura='ND', observaciones=motivo,
-        numero_factura=numero_nd, cufe=cufe_nd,
+        numero_factura=numero_nd,
         forma_pago=inv.get('forma_pago', 'CONTADO'),
     )
 

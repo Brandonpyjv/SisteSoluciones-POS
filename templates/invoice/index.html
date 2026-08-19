@@ -90,10 +90,18 @@
                                        class="btn btn-sm btn-light border text-primary" title="Ver detalle">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{{ url_for('invoice_pdf', invoice_id=invoice.cod_factura) }}"
-                                       class="btn btn-sm btn-light border text-danger" title="PDF" target="_blank">
-                                        <i class="bi bi-file-pdf"></i>
+                                    {% if invoice.factugest_id %}
+                                    <a href="{{ url_for('factura_electronica_pdf', invoice_id=invoice.cod_factura) }}"
+                                       class="btn btn-sm btn-light border text-success"
+                                       title="Factura electrónica {{ invoice.factugest_numero }}" target="_blank">
+                                        <i class="bi bi-file-earmark-check"></i>
                                     </a>
+                                    {% elif invoice.tipo_factura == 'FV' %}
+                                    <span class="btn btn-sm btn-light border text-muted disabled"
+                                          title="Todavía sin facturar electrónicamente">
+                                        <i class="bi bi-hourglass"></i>
+                                    </span>
+                                    {% endif %}
                                     <a href="{{ url_for('delete_invoice', invoice_id=invoice.cod_factura) }}"
                                        class="btn btn-sm btn-light border text-danger" title="Eliminar"
                                        onclick="return confirm('¿Eliminar factura {{ invoice.numero_factura or invoice.cod_factura }}?')">
