@@ -1,7 +1,29 @@
+import os
+import time
+
 import bcrypt
 from fastapi import Request
 from fastapi.responses import RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+
+# ── Duración de la sesión ───────────────────────────────────────────────────
+#
+# La sesión duraba lo que trae Starlette por defecto: catorce días, y contados
+# desde el momento de entrar, no desde la última actividad. En la práctica eso es
+# una sesión que no se cierra: un equipo de mostrador queda abierto a quien pase
+# por ahí, y un turno que termina no termina la sesión.
+#
+# Ahora se cierra por inactividad. Cada petición renueva el reloj, así que trabajar
+# nunca la corta; lo que la corta es dejar de trabajar. Se avisa antes de cerrar
+# —ver el aviso en `layout.html`— porque una sesión que se cae sin decir nada hace
+# perder una factura a medio llenar.
+MINUTOS_DE_SESION = int(os.getenv("SESION_MINUTOS", "30"))
+MINUTOS_DE_AVISO = int(os.getenv("SESION_AVISO_MINUTOS", "2"))
+
+# Marca de la última petición, dentro de la propia sesión firmada. No hace falta
+# guardarla en la base: la cookie va firmada, así que el navegador no puede
+# adelantar su propio reloj para estirar la sesión.
+_CLAVE_VISTO = "visto_en"
 
 # `/api/v1` no lleva sesión: la API de integración se autentica con la llave del
 # cliente, y este middleware la mandaría al formulario de login. La documentación
@@ -94,6 +116,22 @@ def is_admin(user: dict) -> bool:
     return user.get("rol") in ADMIN_ROLES
 
 
+def segundos_restantes(request: Request) -> int:
+    """Cuánto le queda a la sesión antes de cerrarse por inactividad.
+
+    Al pintar una página siempre devuelve el máximo, y está bien: pedir esa página
+    fue actividad, así que el reloj acaba de arrancar de cero. El valor sirve para
+    que el contador del navegador sepa desde dónde contar.
+
+    Se calcula, no se guarda: el reloj es la marca de la última petición y el tope
+    configurado, nada más.
+    """
+    visto = request.session.get(_CLAVE_VISTO)
+    if not visto:
+        return MINUTOS_DE_SESION * 60
+    return max(0, int(MINUTOS_DE_SESION * 60 - (time.time() - visto)))
+
+
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -104,6 +142,17 @@ class AuthMiddleware(BaseHTTPMiddleware):
         user = request.session.get("user")
         if not user:
             return RedirectResponse("/login", status_code=302)
+
+        # Inactividad. Se mira antes de dejar pasar la petición: una sesión vencida
+        # no ejecuta la acción y después cierra, cierra y no la ejecuta.
+        visto = request.session.get(_CLAVE_VISTO)
+        if visto and (time.time() - visto) > MINUTOS_DE_SESION * 60:
+            request.session.clear()
+            return RedirectResponse("/login?expirada=1", status_code=302)
+
+        # Cada petición corre el reloj. Escribir en la sesión también hace que
+        # Starlette reenvíe la cookie, así que su vencimiento se renueva con ella.
+        request.session[_CLAVE_VISTO] = int(time.time())
 
         rol = user.get("rol")
 

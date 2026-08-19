@@ -27,6 +27,7 @@
 {% set es_admin = rol in ('ADMIN', 'SUPERVISOR', 'JEFE_TIENDA') %}
 {% set ruta = request.url.path %}
 {% set por_emitir = pendientes_de_emitir() %}
+{% set sesion_segundos = segundos_de_sesion(request) %}
 
 {% macro item(destino, icono, texto, exacto=false, insignia=none) %}
     {% set activo = (ruta == destino) if exacto else (ruta == destino or ruta.startswith(destino ~ '/')) %}
@@ -147,8 +148,79 @@
     {% endblock %}
 </div>
 
+<div class="modal fade" id="avisoSesion" tabindex="-1" data-bs-backdrop="static"
+     data-bs-keyboard="false" aria-labelledby="avisoSesionTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow" style="border-radius:14px;">
+            <div class="modal-body text-center p-4">
+                <i class="bi bi-clock-history text-warning" style="font-size:2.4rem;"></i>
+                <h2 class="h6 fw-bold mt-3 mb-1" id="avisoSesionTitulo">
+                    Tu sesión está por cerrarse
+                </h2>
+                <p class="text-muted small mb-1">
+                    Por seguridad se cierra sola cuando no hay actividad.
+                </p>
+                <p class="fs-3 fw-bold mb-3 font-monospace" id="avisoSesionReloj">--:--</p>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary fw-bold" id="avisoSesionSeguir">
+                        Seguir trabajando
+                    </button>
+                    <a href="{{ url_for('logout') }}" class="btn btn-link btn-sm text-muted">
+                        Cerrar sesión ahora
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{{ url_for('static', path='js/validacion.js') }}"></script>
+<script>
+(() => {
+    "use strict";
+    let restan = {{ sesion_segundos }};
+    const avisarEn = {{ minutos_de_aviso }} * 60;
+    const caja = document.getElementById("avisoSesion");
+    if (!caja || restan <= 0) return;
+
+    const modal = new bootstrap.Modal(caja);
+    const reloj = document.getElementById("avisoSesionReloj");
+    let visible = false;
+
+    const pintar = () => {
+        const m = Math.floor(restan / 60), s = restan % 60;
+        reloj.textContent = m + ":" + String(s).padStart(2, "0");
+    };
+
+    setInterval(() => {
+        restan -= 1;
+        if (restan <= 0) {
+            // Se acabó: el servidor ya no la acepta, así que se sale por la puerta
+            // en lugar de dejar una pantalla que parece viva y no lo está.
+            window.location = "{{ url_for('login') }}?expirada=1";
+            return;
+        }
+        if (restan <= avisarEn && !visible) {
+            visible = true;
+            modal.show();
+        }
+        if (visible) pintar();
+    }, 1000);
+
+    document.getElementById("avisoSesionSeguir").addEventListener("click", async () => {
+        try {
+            const r = await fetch("{{ url_for('renovar_sesion') }}", { method: "POST" });
+            const datos = await r.json();
+            restan = datos.segundos;
+            visible = false;
+            modal.hide();
+        } catch (e) {
+            window.location.reload();   // sin red, recargar decide qué pasó
+        }
+    });
+})();
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

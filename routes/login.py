@@ -14,7 +14,10 @@ def login_get(request: Request):
         return RedirectResponse("/", status_code=302)
     error = "error" in request.query_params
     logout = "logout" in request.query_params
-    return templates.TemplateResponse(request, "login.html", {"error": error, "logout": logout})
+    expirada = "expirada" in request.query_params
+    return templates.TemplateResponse(request, "login.html",
+                                      {"error": error, "logout": logout,
+                                       "expirada": expirada})
 
 
 @router.post("/login", name="login_post")
@@ -33,7 +36,7 @@ def login_post(
                             usuario={"nombre": "Desconocido"})
         return templates.TemplateResponse(
             request, "login.html",
-            {"error": True, "logout": False},
+            {"error": True, "logout": False, "expirada": False},
             status_code=401,
         )
 

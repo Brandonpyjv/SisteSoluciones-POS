@@ -114,6 +114,7 @@
         .alert-box { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; font-size: 0.875rem; animation: alertIn 0.3s ease both; }
         @keyframes alertIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
         .alert-error   { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; }
+        .alert-warning { background: #fffaf0; border: 1px solid #feebc8; color: #9a5a0c; }
         .alert-success { background: #f0fff4; border: 1px solid #c6f6d5; color: #276749; }
 
         .btn-login {
@@ -165,6 +166,14 @@
         <div class="alert-box alert-error">
             <i class="bi bi-shield-exclamation fs-5"></i>
             <div><strong>Acceso denegado.</strong> Correo o contraseña incorrectos.</div>
+        </div>
+        {% endif %}
+
+        {% if expirada %}
+        <div class="alert-box alert-warning">
+            <i class="bi bi-clock-history fs-5"></i>
+            <div><strong>Tu sesión se cerró por inactividad.</strong>
+                 Vuelve a entrar para seguir trabajando.</div>
         </div>
         {% endif %}
 

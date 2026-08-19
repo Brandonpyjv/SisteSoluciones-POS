@@ -7,7 +7,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from auth import AuthMiddleware, hash_password, role_label, puede_cambiar_foto
+from auth import (AuthMiddleware, MINUTOS_DE_AVISO, MINUTOS_DE_SESION,
+                  hash_password, puede_cambiar_foto, role_label,
+                  segundos_restantes)
 from templates_config import templates
 from routes.login import router as login_router
 from routes.invoice import router as invoice_router
@@ -29,6 +31,7 @@ from services.validaciones import (abreviatura_documento, nombre_documento,
 from routes.dashboard import router as dashboard_router
 from routes.reports import router as reports_router
 from routes.perfil import router as perfil_router
+from routes.sesion import router as sesion_router
 from routes.configuracion import router as configuracion_router
 
 app = FastAPI(title="Siste Soluciones", description="Punto de Venta")
@@ -36,7 +39,14 @@ app = FastAPI(title="Siste Soluciones", description="Punto de Venta")
 # Los middlewares se ejecutan en orden inverso al registro:
 # AuthMiddleware corre primero, luego SessionMiddleware lo prepara.
 app.add_middleware(AuthMiddleware)
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "siste-dev-secret"))
+# La cookie caduca junto con la sesión, no catorce días después: si el navegador
+# se cierra y se vuelve a abrir pasado el tiempo de inactividad, hay que entrar de
+# nuevo. `AuthMiddleware` la renueva en cada petición.
+app.add_middleware(SessionMiddleware,
+                   secret_key=os.getenv("SESSION_SECRET", "siste-dev-secret"),
+                   max_age=MINUTOS_DE_SESION * 60,
+                   same_site="lax",
+                   https_only=os.getenv("COOKIES_SEGURAS", "").lower() in ("1", "si", "true"))
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -55,6 +65,7 @@ app.include_router(auditoria_router)
 app.include_router(ubicacion_router)
 app.include_router(reports_router)
 app.include_router(perfil_router)
+app.include_router(sesion_router)
 app.include_router(dashboard_router)
 app.include_router(configuracion_router)
 
@@ -88,6 +99,10 @@ templates.env.globals["fecha_iso"] = fecha_iso
 templates.env.globals["role_label"] = role_label
 templates.env.globals["puede_cambiar_foto"] = puede_cambiar_foto
 templates.env.globals["etiqueta_estado"] = etiqueta_estado
+
+# El aviso de sesión necesita saber cuánto queda y cuándo avisar.
+templates.env.globals["segundos_de_sesion"] = segundos_restantes
+templates.env.globals["minutos_de_aviso"] = MINUTOS_DE_AVISO
 
 # Los tipos de documento se guardan con el código de la DIAN; las vistas muestran
 # la abreviatura, porque nadie lee «13» y entiende «cédula».
