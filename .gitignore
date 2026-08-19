@@ -39,3 +39,6 @@ Factugest/static/img/perfiles/*
 
 # Registro de lo que generó seed_demo.py en la BD local de cada quien
 Factugest/seed_demo_manifest.json
+
+# Registro de lo que genero seed_historico.py en la BD local de cada quien
+seed_historico_manifest.json

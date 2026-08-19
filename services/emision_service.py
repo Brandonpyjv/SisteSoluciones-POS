@@ -136,4 +136,7 @@ def pendientes_de_emitir():
         "FROM facturas f LEFT JOIN customers c ON f.cod_cliente = c.customer_id "
         "WHERE f.tipo_factura = 'FV' "
         "  AND (f.factugest_id IS NULL OR f.factugest_estado IN ('ERROR', 'RECHAZADO')) "
+        # HISTORICO marca las ventas anteriores a la integración con FactuGest.
+        # Nunca se emitieron y no tiene sentido ofrecerlas para emitir hoy.
+        "  AND COALESCE(f.factugest_estado, '') <> 'HISTORICO' "
         "ORDER BY f.fecha DESC")

@@ -57,11 +57,18 @@ copy .env.example .env
 python migrate.py
 python seed_negocio.py
 python seed_catalogo.py
+
+# 5 · Opcional: seis meses de operación para que el tablero tenga contenido
+python seed_historico.py
 ```
 
 > `seed_negocio.py` deja los datos de la empresa y limpia la operación de ejemplo
 > que trae el volcado. `seed_catalogo.py` carga las 20 referencias que vende el
 > negocio. Los dos son idempotentes.
+>
+> `seed_historico.py` es solo para demostrar: genera seis meses de ventas para que
+> el tablero y los reportes no arranquen en cero. Se deshace exactamente con
+> `python seed_historico.py --limpiar`. **No usar en producción.**
 
 > El archivo del volcado se llama `factugest.sql` porque es el esquema heredado.
 > Se conserva el nombre a propósito: cambiarlo solo escondería de dónde viene.
