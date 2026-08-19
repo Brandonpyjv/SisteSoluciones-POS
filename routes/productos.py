@@ -6,6 +6,7 @@ from services.products_service import (get_all_products_detailed, get_product_by
 from services.inventory_service import ajustar_stock, registrar_saldo_inicial
 from services.taxes import get_all_invoice_taxes
 from routes.formularios import formulario_invalido
+from services import listados
 from templates_config import templates
 
 router = APIRouter(prefix="/products")
@@ -24,9 +25,37 @@ def _enviado(**valores):
 
 
 @router.get("/product", name="product")
-def products(request: Request):
-    data = get_all_products_detailed()
-    return templates.TemplateResponse(request, "product/index.html", {"products": data})
+def products(request: Request, q: str = "", existencias: str = "", activo: str = "",
+             pagina: int = 1):
+    todos = get_all_products_detailed()
+
+    filas = listados.buscar(todos, q, ("sku", "nombre", "descripcion", "codigo_barras"))
+    # El filtro que de verdad se usa en un mostrador: qué hay que reponer.
+    if existencias == "agotado":
+        filas = [f for f in filas if f["controla_stock"] and f["stock"] <= 0]
+    elif existencias == "bajo":
+        filas = [f for f in filas
+                 if f["controla_stock"] and 0 < f["stock"] <= f["stock_minimo"]]
+    elif existencias == "disponible":
+        filas = [f for f in filas if not f["controla_stock"] or f["stock"] > f["stock_minimo"]]
+    filas = listados.igual_a(filas, "activo", activo)
+
+    pagina_filas, meta = listados.paginar(filas, pagina)
+    filtros = {"q": q, "existencias": existencias, "activo": activo}
+
+    con_stock = [p for p in todos if p["controla_stock"]]
+    return templates.TemplateResponse(request, "product/index.html", {
+        "products": pagina_filas,
+        "meta": meta,
+        "filtros": filtros,
+        "consulta": listados.query(filtros),
+        "resumen": {
+            "total": len(todos),
+            "activos": sum(1 for p in todos if p["activo"]),
+            "bajo_minimo": sum(1 for p in con_stock if 0 < p["stock"] <= p["stock_minimo"]),
+            "agotados": sum(1 for p in con_stock if p["stock"] <= 0),
+        },
+    })
 
 
 @router.get("/product/new", name="product_new")

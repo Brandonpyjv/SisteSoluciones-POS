@@ -7,6 +7,7 @@ from services.branches import get_branch_by_id
 from services.ubicacion_service import (get_all_departamentos, get_municipio_by_id,
                                         get_municipios_by_departamento)
 from routes.formularios import formulario_invalido
+from services import listados
 from templates_config import templates
 
 router = APIRouter(prefix="/customer")
@@ -41,9 +42,30 @@ def _contexto_de_lo_enviado(datos, customer=None):
 
 
 @router.get("", name="customer")
-def customer(request: Request):
-    data = get_all_customers()
-    return templates.TemplateResponse(request, "customer/index.html", {"all_customers": data})
+def customer(request: Request, q: str = "", tipo_persona: str = "", activo: str = "",
+             pagina: int = 1):
+    todos = get_all_customers()
+
+    filas = listados.buscar(todos, q, ("full_name", "document_number", "email",
+                                       "phone", "ciudad"))
+    filas = listados.igual_a(filas, "tipo_persona", tipo_persona)
+    filas = listados.igual_a(filas, "activo", activo)
+
+    pagina_filas, meta = listados.paginar(filas, pagina)
+    filtros = {"q": q, "tipo_persona": tipo_persona, "activo": activo}
+
+    return templates.TemplateResponse(request, "customer/index.html", {
+        "all_customers": pagina_filas,
+        "meta": meta,
+        "filtros": filtros,
+        "consulta": listados.query(filtros),
+        "resumen": {
+            "total": len(todos),
+            "activos": sum(1 for c in todos if c.get("activo")),
+            "empresas": sum(1 for c in todos if c.get("tipo_persona") == "JURIDICA"),
+            "personas": sum(1 for c in todos if c.get("tipo_persona") != "JURIDICA"),
+        },
+    })
 
 
 @router.get("/new", name="new_customer")

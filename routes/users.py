@@ -7,6 +7,7 @@ from services.avatar_service import FotoInvalidaError, eliminar_foto, guardar_fo
 from services.branches import get_all_branches
 from routes.formularios import formulario_invalido
 from auth import can_manage, ROLE_HIERARCHY, ROLE_LABELS
+from services import listados
 from templates_config import templates
 
 router = APIRouter(prefix="/users")
@@ -42,12 +43,28 @@ async def _aplicar_foto(archivo: UploadFile, cod_usuario: int, foto_anterior=Non
 
 
 @router.get("", name="users")
-def users(request: Request):
+def users(request: Request, q: str = "", rol: str = "", pagina: int = 1):
     actor = request.session.get("user", {})
-    data = get_all_users()
+    todos = get_all_users()
+
+    filas = listados.buscar(todos, q, ("nombre", "correo", "rol", "empresa_nombre"))
+    filas = listados.igual_a(filas, "rol", rol)
+    pagina_filas, meta = listados.paginar(filas, pagina)
+    filtros = {"q": q, "rol": rol}
+
     return templates.TemplateResponse(request, "users/index.html", {
-        "usuarios": data,
+        "usuarios": pagina_filas,
+        "meta": meta,
+        "filtros": filtros,
+        "consulta": listados.query(filtros),
+        "roles": list(ROLE_HIERARCHY),
         "actor_rol": actor.get("rol", ""),
+        "resumen": {
+            "total": len(todos),
+            "administradores": sum(1 for u in todos if u.get("rol") == "ADMIN"),
+            "cajeros": sum(1 for u in todos if u.get("rol") == "CAJERO"),
+            "con_foto": sum(1 for u in todos if u.get("foto")),
+        },
     })
 
 

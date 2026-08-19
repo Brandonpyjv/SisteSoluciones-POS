@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% import "_tabla.html" as t %}
 
 {% block title %}Productos | Siste Soluciones{% endblock %}
 
@@ -21,9 +22,36 @@
         {% endif %}
     </div>
 
+    {{ t.tarjetas([
+        ('Productos', resumen.total, 'bi-box-seam', '#f7e6e6', 'text-primary'),
+        ('Activos', resumen.activos, 'bi-check-circle', '#e6f9f1', 'text-success'),
+        ('Bajo mínimo', resumen.bajo_minimo, 'bi-exclamation-triangle', '#fff3e0', 'text-warning'),
+        ('Agotados', resumen.agotados, 'bi-x-octagon', '#fce4ec', 'text-danger')
+    ]) }}
+
+    {% call t.filtros(url_for('product'), filtros, 'Nombre, código o código de barras…') %}
+        <div class="col-lg-3 col-md-6">
+            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Existencias</label>
+            <select name="existencias" class="form-select form-select-sm bg-light border-0">
+                <option value="">Todas</option>
+                <option value="agotado" {{ 'selected' if filtros.existencias == 'agotado' }}>Agotados</option>
+                <option value="bajo" {{ 'selected' if filtros.existencias == 'bajo' }}>Bajo mínimo</option>
+                <option value="disponible" {{ 'selected' if filtros.existencias == 'disponible' }}>Disponibles</option>
+            </select>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Estado</label>
+            <select name="activo" class="form-select form-select-sm bg-light border-0">
+                <option value="">Todos</option>
+                <option value="1" {{ 'selected' if filtros.activo == '1' }}>Activos</option>
+                <option value="0" {{ 'selected' if filtros.activo == '0' }}>Inactivos</option>
+            </select>
+        </div>
+    {% endcall %}
+
     <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
         <div class="card-header bg-white py-3 border-bottom border-light">
-            <h6 class="m-0 font-weight-bold text-primary">Todos los Productos</h6>
+            <h6 class="m-0 font-weight-bold text-primary">Catálogo</h6>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -112,7 +140,9 @@
                         <tr>
                             <td colspan="10" class="text-center py-5 text-muted">
                                 <i class="bi bi-box-seam display-4 d-block mb-3 text-secondary opacity-50"></i>
-                                No hay productos registrados.
+                                {% if filtros.q or filtros.existencias or filtros.activo %}
+                                Ningún producto coincide con la búsqueda.
+                                {% else %}Todavía no hay productos registrados.{% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -122,9 +152,7 @@
         </div>
     </div>
 
-    <div class="mt-3 d-flex justify-content-between align-items-center">
-        <p class="text-muted small mb-0">Mostrando {{ products|length }} registros.</p>
-    </div>
+    {{ t.pie(meta, url_for('product'), consulta, 'productos') }}
 
 </div>
 {% endblock %}
