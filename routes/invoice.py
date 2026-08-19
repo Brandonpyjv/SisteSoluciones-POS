@@ -21,7 +21,8 @@ from services.inventory_service import (verificar_disponibilidad,
 from services.numeracion_service import reservar_numero, RangoResolucionAgotadoError
 from services.validaciones import abreviatura_documento
 from services.factugest_client import FactugestError, configurado, descargar_pdf, descargar_xml
-from services.emision_service import emitir as emitir_en_factugest
+from services.emision_service import (emitir as emitir_en_factugest,
+                                      pendientes_de_emitir)
 from templates_config import templates
 from database import get_one, get_many, execute_update, transaction
 
@@ -222,6 +223,56 @@ async def create_invoice_post(
         return _render_invoice_form(request, error=str(e), status_code=422)
 
     return RedirectResponse(url=f"/invoice/{numero_factura}", status_code=303)
+
+
+@router.get("/pendientes", name="facturas_pendientes")
+def facturas_pendientes(request: Request):
+    """Ventas cobradas a las que todavia les falta su factura electronica.
+
+    Se declara antes que /{numero_factura} a proposito: FastAPI resuelve por
+    orden, y si no, «pendientes» entraria como un numero de factura mas.
+    """
+    resumen = None
+    if request.query_params.get("emitidas") is not None:
+        resumen = {
+            "emitidas": int(request.query_params.get("emitidas") or 0),
+            "fallidas": int(request.query_params.get("fallidas") or 0),
+            "motivo": request.query_params.get("motivo") or None,
+        }
+    return templates.TemplateResponse(request, "invoice/pendientes.html", {
+        "pendientes": pendientes_de_emitir(),
+        "conectado": configurado(),
+        "resumen": resumen,
+    })
+
+
+@router.post("/pendientes/emitir", name="emitir_pendientes")
+def emitir_pendientes(request: Request):
+    """Emite de una vez todo lo represado.
+
+    Se detiene ante un fallo que no tiene sentido reintentar en bloque -la llave
+    mal configurada, FactuGest apagado-, porque insistir con las demas daria el
+    mismo error tantas veces como ventas haya.
+    """
+    emitidas = fallidas = 0
+    motivo = None
+    for venta in pendientes_de_emitir():
+        completa = get_invoice_by_id(venta["cod_factura"])
+        try:
+            emitir_en_factugest(completa)
+            emitidas += 1
+        except FactugestError as e:
+            fallidas += 1
+            motivo = motivo or e.detalle
+            if e.recuperable:
+                break
+
+    from urllib.parse import urlencode
+    parametros = {"emitidas": emitidas, "fallidas": fallidas}
+    if motivo:
+        parametros["motivo"] = motivo
+    return RedirectResponse(url=f"/invoice/pendientes?{urlencode(parametros)}",
+                            status_code=303)
 
 
 @router.get("/{numero_factura}", name="view_invoice")
@@ -505,29 +556,39 @@ async def create_nota_debito_post(
 # ── Emision electronica a traves de FactuGest ────────────────────────────────
 
 @router.post("/{invoice_id}/emitir", name="emitir_factura_electronica")
-def emitir_factura_electronica(request: Request, invoice_id: int):
+def emitir_factura_electronica(request: Request, invoice_id: int,
+                               volver: str = Form("")):
     """Pide a FactuGest que convierta esta venta en una factura electronica.
 
     La venta ya esta guardada y cobrada; esto es un paso aparte. Si falla, la
     venta no se toca: queda con el error anotado para poder reintentarla.
     """
+    destino = "/invoice/pendientes" if volver == "pendientes" else None
+
     venta = get_invoice_by_id(invoice_id)
     if not venta:
-        return RedirectResponse(url="/invoice", status_code=302)
+        return RedirectResponse(url=destino or "/invoice", status_code=302)
 
     if venta.get("factugest_id"):
         # Ya se emitio. No se vuelve a pedir: FactuGest devolveria la misma, pero
         # no hay razon para el viaje.
-        return RedirectResponse(url=f"/invoice/{venta['numero_factura']}", status_code=303)
+        return RedirectResponse(url=destino or f"/invoice/{venta['numero_factura']}",
+                                status_code=303)
 
+    from urllib.parse import quote
     try:
         emitir_en_factugest(venta)
     except FactugestError as e:
-        from urllib.parse import quote
+        if destino:
+            return RedirectResponse(
+                url=f"{destino}?emitidas=0&fallidas=1&motivo={quote(e.detalle)}",
+                status_code=303)
         return RedirectResponse(
             url=f"/invoice/{venta['numero_factura']}?error={quote(e.detalle)}",
             status_code=303)
 
+    if destino:
+        return RedirectResponse(url=f"{destino}?emitidas=1&fallidas=0", status_code=303)
     return RedirectResponse(url=f"/invoice/{venta['numero_factura']}", status_code=303)
 
 

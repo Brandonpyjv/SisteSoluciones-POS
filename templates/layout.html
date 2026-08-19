@@ -51,6 +51,11 @@
                         <i class="bi bi-receipt"></i> Facturas
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-2" href="{{ url_for('facturas_pendientes') }}">
+                        <i class="bi bi-hourglass-split"></i> Pendientes de emitir
+                    </a>
+                </li>
             </ul>
 
             {% set sesion = request.session.get('user', {}) %}
