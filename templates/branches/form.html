@@ -159,7 +159,8 @@
 
                         <!-- Sección Resolución DIAN -->
                         <div class="mt-4 p-3 border rounded" style="background:#f8f9fa;">
-                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-shield-check me-1"></i>Resolución DIAN - Facturación Electrónica</h6>
+                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-hash me-1"></i>Numeración interna de ventas</h6>
+                            <p class="small text-muted mb-3">Con esta numeración se identifica la venta dentro del sistema. El número que exige la DIAN lo asigna FactuGest al emitir la factura electrónica.</p>
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label small fw-bold text-secondary">Prefijo Factura</label>
@@ -172,34 +173,6 @@
                                     <input type="number" name="consecutivo_actual" class="form-control bg-white border font-monospace{{ f.invalido(errores, 'consecutivo_actual') }}\"
                                            value="{{ v.consecutivo_actual or 1 }}"
                                            min="1" step="1">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-secondary">N° Resolución DIAN</label>
-                                    <input type="text" name="resolucion_dian" class="form-control bg-white border font-monospace{{ f.invalido(errores, 'resolucion_dian') }}\"
-                                           value="{{ v.resolucion_dian or '' }}"
-                                           placeholder="18760000001" maxlength="50">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-secondary">Desde (rango #)</label>
-                                    <input type="number" name="resolucion_desde" class="form-control bg-white border font-monospace{{ f.invalido(errores, 'resolucion_desde') }}\"
-                                           value="{{ v.resolucion_desde or '' }}"
-                                           placeholder="1" min="1" step="1">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-secondary">Hasta (rango #)</label>
-                                    <input type="number" name="resolucion_hasta" class="form-control bg-white border font-monospace{{ f.invalido(errores, 'resolucion_hasta') }}\"
-                                           value="{{ v.resolucion_hasta or '' }}"
-                                           placeholder="5000" min="1" step="1">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-secondary">Fecha Desde</label>
-                                    <input type="date" name="resolucion_fecha_desde" class="form-control bg-white border{{ f.invalido(errores, 'resolucion_fecha_desde') }}\"
-                                           value="{{ fecha_iso(v.resolucion_fecha_desde) }}">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-secondary">Fecha Hasta</label>
-                                    <input type="date" name="resolucion_fecha_hasta" class="form-control bg-white border{{ f.invalido(errores, 'resolucion_fecha_hasta') }}\"
-                                           value="{{ fecha_iso(v.resolucion_fecha_hasta) }}">
                                 </div>
                             </div>
                         </div>

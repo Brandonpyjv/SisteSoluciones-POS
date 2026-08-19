@@ -1,8 +1,8 @@
 from database import get_all_from_table, execute_query, execute_update, get_one, get_many
 from services.validaciones import (REGIMENES_TRIBUTARIOS, Validador, bandera, codigo_ciiu,
                                    correo as validar_correo, decimal, dv as validar_dv,
-                                   entero, fechas_ordenadas, nit as validar_nit, opcion,
-                                   prefijo as validar_prefijo, rango, razon_social,
+                                   entero, nit as validar_nit, opcion,
+                                   prefijo as validar_prefijo, razon_social,
                                    sitio_web, telefono as validar_telefono, texto)
 
 # El emisor casi siempre es un NIT; el resto existe para el caso de la persona
@@ -32,8 +32,6 @@ def validar_empresa(datos: dict, branch_id: int = None) -> Validador:
     v.campo("autoretenedor", bandera, datos.get("autoretenedor"))
     v.campo("gran_contribuyente", bandera, datos.get("gran_contribuyente"))
     v.campo("prefijo_factura", validar_prefijo, datos.get("prefijo_factura") or "FV")
-    v.campo("resolucion_dian", texto, datos.get("resolucion_dian"), maximo=50,
-            requerido=False)
 
     # El dígito de verificación se comprueba contra el NIT, o se calcula si viene
     # vacío: uno equivocado se imprime en la factura y la DIAN rechaza el documento.
@@ -61,26 +59,12 @@ def validar_empresa(datos: dict, branch_id: int = None) -> Validador:
     else:
         v.datos["cod_municipio"] = None
 
-    # Vigencia y rango de la resolución: opcionales mientras no se tenga la
-    # resolución, pero coherentes si se llenan.
-    v.pareja(("resolucion_fecha_desde", "resolucion_fecha_hasta"), fechas_ordenadas,
-             datos.get("resolucion_fecha_desde"), datos.get("resolucion_fecha_hasta"),
-             "resolucion_fecha_desde", "resolucion_fecha_hasta", requerido=False)
-    v.pareja(("resolucion_desde", "resolucion_hasta"), rango,
-             datos.get("resolucion_desde"), datos.get("resolucion_hasta"),
-             "resolucion_desde", "resolucion_hasta", requerido=False)
-
+    # La resolución DIAN no se pide aquí: la administra FactuGest, que es quien
+    # numera las facturas electrónicas. El prefijo y el consecutivo que siguen sí
+    # son de este sistema, y numeran la venta desde que se registra.
     v.campo("consecutivo_actual", entero,
             datos.get("consecutivo_actual") if datos.get("consecutivo_actual") not in (None, "") else 1,
             minimo=1)
-
-    # El consecutivo tiene que caer dentro del rango autorizado: fuera de él, la
-    # DIAN rechaza el documento por numeración no autorizada.
-    consecutivo = v.datos.get("consecutivo_actual")
-    desde_n, hasta_n = v.datos.get("resolucion_desde"), v.datos.get("resolucion_hasta")
-    if consecutivo and desde_n and hasta_n and not (desde_n <= consecutivo <= hasta_n):
-        v.errores["consecutivo_actual"] = (
-            f"Debe estar dentro del rango autorizado {desde_n}–{hasta_n}")
 
     return v
 

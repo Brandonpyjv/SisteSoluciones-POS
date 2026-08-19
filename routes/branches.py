@@ -16,8 +16,7 @@ PLANTILLA = "branches/form.html"
 CAMPOS = ("nombre", "nit", "dv", "direccion", "cod_municipio", "telefono", "correo",
           "regimen_tributario", "actividad_economica", "tipo_documento", "website",
           "tarifa_ica", "autoretenedor", "gran_contribuyente", "prefijo_factura",
-          "resolucion_dian", "resolucion_fecha_desde", "resolucion_fecha_hasta",
-          "resolucion_desde", "resolucion_hasta", "consecutivo_actual")
+          "consecutivo_actual")
 
 
 def _enviado(**valores):
@@ -44,9 +43,9 @@ def _guardar(v):
             d["telefono"], d["correo"], d["regimen_tributario"],
             d["actividad_economica"], d["tipo_documento"], d["website"],
             d["tarifa_ica"], d["autoretenedor"], d["gran_contribuyente"],
-            d["prefijo_factura"], d["resolucion_dian"],
-            d["resolucion_fecha_desde"], d["resolucion_fecha_hasta"],
-            d["resolucion_desde"], d["resolucion_hasta"], d["consecutivo_actual"])
+            d["prefijo_factura"],
+            # La resolución DIAN la administra FactuGest; aquí van siempre vacías.
+            None, None, None, None, None, d["consecutivo_actual"])
 
 
 @router.get("", name="branches")
@@ -82,11 +81,6 @@ def create_branch_post(
     autoretenedor: str = Form("0"),
     gran_contribuyente: str = Form("0"),
     prefijo_factura: str = Form("FV"),
-    resolucion_dian: str = Form(""),
-    resolucion_fecha_desde: Optional[str] = Form(None),
-    resolucion_fecha_hasta: Optional[str] = Form(None),
-    resolucion_desde: Optional[str] = Form(None),
-    resolucion_hasta: Optional[str] = Form(None),
     consecutivo_actual: Optional[str] = Form("1"),
 ):
     enviado = _enviado(**locals())
@@ -132,11 +126,6 @@ def update_branch_post(
     autoretenedor: str = Form("0"),
     gran_contribuyente: str = Form("0"),
     prefijo_factura: str = Form("FV"),
-    resolucion_dian: str = Form(""),
-    resolucion_fecha_desde: Optional[str] = Form(None),
-    resolucion_fecha_hasta: Optional[str] = Form(None),
-    resolucion_desde: Optional[str] = Form(None),
-    resolucion_hasta: Optional[str] = Form(None),
     consecutivo_actual: Optional[str] = Form("1"),
 ):
     enviado = _enviado(**locals())
