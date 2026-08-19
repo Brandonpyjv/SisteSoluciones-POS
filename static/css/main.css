@@ -1,3 +1,70 @@
+/* ── Paleta de Siste Soluciones ──────────────────────────────────────────────
+ *
+ * El rojo #7A0000 es el exacto del logo. De el salen los demas tonos: #A81818
+ * para el extremo claro del degradado y #520000 para bordes y estados activos.
+ * El fondo se mantiene blanco.
+ *
+ * Bootstrap pinta `text-primary`, `bg-primary` y compania a partir de sus
+ * propias variables, asi que no basta con cambiar los hexadecimales sueltos:
+ * hay que redefinirlas aqui o las 113 apariciones de `text-primary` seguirian
+ * saliendo azules.
+ *
+ * El naranja de peligro se conserva: es mas brillante que el rojo de la marca y
+ * sigue distinguiendose. Igualarlos dejaria los botones de eliminar con el
+ * mismo aspecto que los de guardar.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+    --siste-rojo:        #7a0000;
+    --siste-rojo-claro:  #a81818;
+    --siste-rojo-oscuro: #520000;
+
+    --bs-primary:               #7a0000;
+    --bs-primary-rgb:           122, 0, 0;
+    --bs-primary-text-emphasis: #520000;
+    --bs-primary-bg-subtle:     #f7e6e6;
+    --bs-primary-border-subtle: #e3bcbc;
+
+    --bs-link-color:            #7a0000;
+    --bs-link-color-rgb:        122, 0, 0;
+    --bs-link-hover-color:      #520000;
+    --bs-link-hover-color-rgb:  82, 0, 0;
+}
+
+/* El foco de los campos lo trae Bootstrap con un azul fijo, no con la variable. */
+.form-control:focus,
+.form-select:focus {
+    border-color: #c98a8a;
+    box-shadow: 0 0 0 0.2rem rgba(122, 0, 0, 0.15);
+}
+
+.form-check-input:checked {
+    background-color: var(--siste-rojo);
+    border-color: var(--siste-rojo);
+}
+
+.form-check-input:focus {
+    border-color: #c98a8a;
+    box-shadow: 0 0 0 0.2rem rgba(122, 0, 0, 0.15);
+}
+
+.btn-outline-primary {
+    color: var(--siste-rojo);
+    border-color: var(--siste-rojo);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:active {
+    background-color: var(--siste-rojo);
+    border-color: var(--siste-rojo);
+    color: #fff;
+}
+
+/* La fila resaltada de las tablas, que Bootstrap tinta con el primario. */
+.table-hover > tbody > tr:hover > * {
+    --bs-table-accent-bg: rgba(122, 0, 0, 0.04);
+}
+
 
 body {
     background-color: #ffffff; /* Blanco puro */
@@ -9,7 +76,7 @@ body {
 .sidebar {
     width: 240px;
     height: 100vh;
-    background: linear-gradient(135deg, #4e73df, #6ea0f5);
+    background: linear-gradient(135deg, #7a0000, #a81818);
     position: fixed;
     top: 0;
     left: 0;
@@ -57,7 +124,7 @@ body {
     position: relative;
     border-radius: 10px;
     overflow: hidden;
-    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    background: linear-gradient(135deg, #7a0000 0%, #520000 100%);
     color: white;
     padding: 40px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -127,7 +194,7 @@ body {
 }
 
 .table thead tr {
-    background: linear-gradient(135deg, #4e73df, #6ea0f5);
+    background: linear-gradient(135deg, #7a0000, #a81818);
 }
 
 .table th {
@@ -150,14 +217,14 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #4e73df, #6ea0f5);
+    background: linear-gradient(135deg, #7a0000, #a81818);
     border-color: transparent;
     color: #fff;
     transition: all 0.3s ease;
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #3a5ec0, #4e73df);
+    background: linear-gradient(135deg, #520000, #7a0000);
     border-color: transparent;
     color: #fff;
 }
@@ -200,8 +267,8 @@ body {
 
 .btn-cancel {
     background-color: #fff;
-    border: 1px solid #4e73df;
-    color: #4e73df;
+    border: 1px solid #7a0000;
+    color: #7a0000;
     padding: 8px 15px;
     font-size: 14px;
     border-radius: 5px;
@@ -214,12 +281,12 @@ body {
 
 .btn-cancel:hover {
     background-color: #e7f0ff;
-    color: #224abe;
-    border-color: #224abe;
+    color: #520000;
+    border-color: #520000;
 }
 
 .btn-update {
-    background-color: #4e73df;
+    background-color: #7a0000;
     border: none;
     color: #fff;
     padding: 8px 15px;
@@ -237,7 +304,7 @@ body {
 }
 
 .update-metrics-title {
-    color: #4e73df;
+    color: #7a0000;
     font-weight: 700;
     cursor: default;
     margin-bottom: 1rem;
@@ -528,5 +595,5 @@ body {
 /* Reporte seleccionado en el catálogo lateral */
 .list-group-item.active-report {
     background: #f4f7ff;
-    border-left: 3px solid #4e73df;
+    border-left: 3px solid #7a0000;
 }

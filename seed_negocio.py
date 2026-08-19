@@ -1,18 +1,23 @@
 """
 Deja la base con los datos de Siste Soluciones.
 
-    python seed_negocio.py
+    python seed_negocio.py              solo los datos de la empresa
+    python seed_negocio.py --reiniciar  ademas, deja la operacion en cero
 
 El volcado de `base/` trae el esquema y los catálogos —municipios, impuestos,
 estados de pago, métodos de pago—, que sirven igual aquí. Pero también trae las
 empresas, los clientes, los productos y las facturas de ejemplo de FactuGest, que
 son de otro negocio: un punto de venta nuevo no arranca con las ventas de otro.
 
-Esto deja la base en el estado con el que abre Siste Soluciones: los catálogos
-intactos, la operación en cero y la empresa con sus datos reales.
+Con `--reiniciar` deja la base en el estado con el que abre el negocio: los
+catálogos intactos y la operación en cero. **Eso borra ventas, productos y
+clientes**, así que es solo para la instalación inicial; sin la bandera el script
+se limita a los datos de la empresa y no toca nada más.
 
-Es idempotente: correrlo dos veces deja lo mismo.
+Sin `--reiniciar` es idempotente y seguro: correrlo dos veces deja lo mismo.
 """
+import sys
+
 from database import execute_query, execute_update, get_many, get_one
 from services.validaciones import calcular_dv
 
@@ -42,10 +47,13 @@ def limpiar_operacion_heredada():
     return borrados
 
 
-def main():
+def main(reiniciar=False):
     dv = str(calcular_dv(NIT))
 
-    borrados = limpiar_operacion_heredada()
+    # Solo bajo petición explícita: borrar la operación de un sistema que lleva
+    # meses vendiendo no puede ser el comportamiento por defecto de un script que
+    # se ejecuta para corregir un dato de la empresa.
+    borrados = limpiar_operacion_heredada() if reiniciar else {}
     if borrados:
         print("  operación de ejemplo de FactuGest eliminada:")
         for tabla, n in borrados.items():
@@ -105,12 +113,26 @@ def main():
         "UPDATE usuarios SET cod_empresa=%s WHERE cod_empresa IS NULL OR cod_empresa<>%s",
         (cod_empresa, cod_empresa))
 
+    # Los usuarios llegaron del fork con el correo del otro negocio, y con ese
+    # correo es con el que inician sesión.
+    correos = execute_update(
+        "UPDATE usuarios SET correo = REPLACE(correo, '@factugest.com', "
+        "  '@sistesoluciones.com') WHERE correo LIKE '%@factugest.com'")
+    if correos:
+        print(f"  {correos} correo(s) de usuario pasados a @sistesoluciones.com")
+
     print(f"  NIT {NIT}-{dv}  ·  {datos[3]}, {datos[4]}")
     print(f"  {afectados} usuario(s) apuntados a la empresa")
     print(f"  resolución y consecutivos vacíos: los administra FactuGest")
 
 
 if __name__ == "__main__":
-    print("Siste Soluciones — datos del negocio")
-    main()
+    reiniciar = "--reiniciar" in sys.argv
+    print("Siste Soluciones — datos del negocio"
+          + (" (reiniciando la operación)" if reiniciar else ""))
+    main(reiniciar)
+    if not reiniciar:
+        n = get_one("SELECT COUNT(*) n FROM facturas")["n"]
+        if n:
+            print(f"  la operación no se tocó: {n} venta(s) siguen ahí")
     print("Listo.")

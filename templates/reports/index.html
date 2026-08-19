@@ -105,7 +105,7 @@
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead>
-                                <tr class="text-uppercase small fw-bold" style="letter-spacing:0.5px;background:linear-gradient(135deg,#4e73df,#6ea0f5);">
+                                <tr class="text-uppercase small fw-bold" style="letter-spacing:0.5px;background:linear-gradient(135deg,#7a0000,#a81818);">
                                     {% for campo, titulo, tipo in definicion.columnas %}
                                     <th class="{{ 'ps-4' if loop.first }}{{ ' pe-4' if loop.last }}"
                                         style="background:transparent;color:#fff;
@@ -141,7 +141,7 @@
                             </tbody>
                             {% if filas and totales %}
                             <tfoot>
-                                <tr style="background:#f8f9fc;border-top:2px solid #4e73df;">
+                                <tr style="background:#f8f9fc;border-top:2px solid #7a0000;">
                                     {% for campo, titulo, tipo in definicion.columnas %}
                                     <td class="fw-bold text-dark {{ 'ps-4' if loop.first }}{{ ' pe-4' if loop.last }}"
                                         style="text-align:{{ 'right' if tipo in ('dinero','numero','porcentaje') else 'left' }};
