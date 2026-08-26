@@ -23,7 +23,6 @@
 
 {% block content %}
 <form method="POST" action="{{ url_for('create_invoice') }}" id="formFactura" novalidate>
-<input type="hidden" name="vista" value="nueva">
 <input type="hidden" name="tipo_factura" value="FV">
 <input type="hidden" name="cod_cliente" id="codCliente">
 <input type="hidden" name="cod_descuento_factura" id="codDescuentoFactura">
@@ -38,8 +37,6 @@
         </span>
     </div>
     <div class="d-flex align-items-center gap-2">
-        <a href="{{ url_for('new_invoice') }}" class="btn btn-sm btn-link text-muted text-decoration-none"
-           title="El formulario anterior, mientras se compara con este">Ver formulario anterior</a>
         <a href="{{ url_for('invoice') }}" class="btn btn-light border btn-sm px-3">Cancelar</a>
         <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold" id="btnEmitirBarra" disabled>
             <i class="bi bi-check2-circle me-1"></i> Registrar venta

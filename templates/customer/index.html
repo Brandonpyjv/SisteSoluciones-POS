@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% import "_tabla.html" as t %}
 
-{% block title %}Clientes | Factugest{% endblock %}
+{% block title %}Clientes | Siste Soluciones{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -21,7 +21,7 @@
     </div>
 
     {{ t.tarjetas([
-        ('Clientes', resumen.total, 'bi-people', '#e8edff', 'text-primary'),
+        ('Clientes', resumen.total, 'bi-people', '#f7e6e6', 'text-primary'),
         ('Activos', resumen.activos, 'bi-check-circle', '#e6f9f1', 'text-success'),
         ('Empresas', resumen.empresas, 'bi-building', '#fff3e0', 'text-warning'),
         ('Personas naturales', resumen.personas, 'bi-person', '#fce4ec', 'text-danger')
@@ -54,7 +54,7 @@
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
-                        <tr class="text-uppercase small fw-bold text-white" style="letter-spacing:0.5px;background:linear-gradient(135deg,#4e73df,#6ea0f5);">
+                        <tr class="text-uppercase small fw-bold text-white" style="letter-spacing:0.5px;background:linear-gradient(135deg,#7a0000,#a81818);">
                             <th scope="col" class="ps-4" style="background:transparent;color:#fff;">ID</th>
                             <th scope="col" style="background:transparent;color:#fff;">Nombre</th>
                             <th scope="col" style="background:transparent;color:#fff;">Tipo Doc.</th>

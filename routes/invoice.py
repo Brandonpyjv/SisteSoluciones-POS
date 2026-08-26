@@ -66,8 +66,7 @@ def invoice(request: Request, q: str = "", tipo: str = "", estado: str = "",
     })
 
 
-def _render_invoice_form(request: Request, error: str = None, status_code: int = 200,
-                         plantilla: str = "invoice/form.html"):
+def _render_invoice_form(request: Request, error: str = None, status_code: int = 200):
     session_user = request.session.get("user", {})
     cod_empresa = session_user.get("cod_empresa")
 
@@ -89,7 +88,7 @@ def _render_invoice_form(request: Request, error: str = None, status_code: int =
         "SELECT cod_descuento, descripcion, porcentaje FROM descuentos "
         "WHERE aplica_a_factura = 1 ORDER BY descripcion"
     )
-    return templates.TemplateResponse(request, plantilla, {
+    return templates.TemplateResponse(request, "invoice/form_nueva.html", {
         "empresa": empresa,
         "metodos_pago": get_all_payment_methods(),
         "pagos_factura": get_all_invoice_payments(),
@@ -99,22 +98,10 @@ def _render_invoice_form(request: Request, error: str = None, status_code: int =
     }, status_code=status_code)
 
 
-# Las dos vistas conviven mientras se compara la nueva con la anterior. Comparten
-# el `POST`, la validación y el guardado: lo único distinto es la pantalla, así que
-# probar la nueva no puede cambiar cómo se registra una venta.
-VISTAS = {"nueva": "invoice/form_nueva.html", "anterior": "invoice/form.html"}
-
-
 @router.get("/new", name="new_invoice")
 def new_invoice(request: Request):
-    """La vista anterior. Se conserva hasta que la nueva quede aprobada."""
+    """El formulario de emisión: a quién, qué y cómo paga, en tres pasos."""
     return _render_invoice_form(request)
-
-
-@router.get("/nueva", name="new_invoice_nueva")
-def new_invoice_nueva(request: Request):
-    """La vista nueva: el mismo formulario, organizado como un paso a paso."""
-    return _render_invoice_form(request, plantilla=VISTAS["nueva"])
 
 
 @router.post("/new", name="create_invoice")
@@ -139,11 +126,7 @@ async def create_invoice_post(
     cod_descuento_factura: Optional[str] = Form(None),
     valor_descuento_factura: str = Form("0"),
     plazo_pago: str = Form("0"),
-    # Desde qué pantalla se envió, para devolver los errores a esa misma y no a
-    # la otra. No influye en nada más.
-    vista: str = Form("anterior"),
 ):
-    plantilla = VISTAS.get(vista, VISTAS["anterior"])
     fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Los arreglos de la tabla de productos vienen en paralelo y tienen que
@@ -156,7 +139,7 @@ async def create_invoice_post(
     if len(cantidades) != len(productos_enviados):
         return _render_invoice_form(
             request, error="Los datos de los productos llegaron incompletos.",
-            status_code=422, plantilla=plantilla)
+            status_code=422)
 
     lineas_enviadas = [
         {
@@ -177,8 +160,7 @@ async def create_invoice_post(
         "lineas": lineas_enviadas,
     })
     if not v.valido:
-        return _render_invoice_form(request, error=v.resumen(), status_code=422,
-                                    plantilla=plantilla)
+        return _render_invoice_form(request, error=v.resumen(), status_code=422)
 
     d = v.datos
     cod_cliente = d["cod_cliente"]
@@ -218,7 +200,7 @@ async def create_invoice_post(
             for f in faltantes
         )
         return _render_invoice_form(request, error=f"Stock insuficiente — {detalle}",
-                                    status_code=422, plantilla=plantilla)
+                                    status_code=422)
 
     session_user = request.session.get("user", {})
     cod_usuario = session_user.get("cod_usuario", 1)
